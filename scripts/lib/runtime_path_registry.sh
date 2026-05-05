@@ -1,6 +1,6 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 # UTF-8 (no BOM)
-# Detect local executable/app paths and persist once to .llm-wiki/detected-paths.json
+# Detect local executable/app paths and persist once to llm-wiki/detected-paths.json
 
 DETECTED_OBSIDIAN_PATH=""
 
@@ -258,10 +258,10 @@ detect_runtime_paths() {
 
 persist_detected_paths_once() {
   local repo_root="$1"
-  local cfg_dir="$repo_root/.llm-wiki"
+  local cfg_dir="$repo_root/llm-wiki"
   local cfg_file="$cfg_dir/detected-paths.json"
   local root_gitignore="$repo_root/.gitignore"
-  local ignore_entry="/.llm-wiki/detected-paths.json"
+  local ignore_entry="/llm-wiki/detected-paths.json"
   local ts
   local obsidian_path
   local selected_key selected_name selected_path
@@ -310,3 +310,4 @@ persist_detected_paths_once() {
     printf '}\n'
   } > "$cfg_file"
 }
+

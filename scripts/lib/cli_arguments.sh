@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 # UTF-8 (no BOM)
 
 parse_args() {
@@ -44,12 +44,12 @@ Usage:
   bash install.sh --only-wiki [--dir <project>] [--name <name>] [OPTIONS]
 
 Modes:
-  Default              Install tools -> Initialize .llm-wiki -> Configure Obsidian
+  Default              Install tools -> Initialize llm-wiki -> Configure Obsidian
   --only-tools         Install all tools only (no wiki creation)
                        Use: Add tools to existing environment without creating wiki
   --only-obsidian      Install Obsidian software + plugins + config in project root
                        Use: Configure Obsidian for the current project
-  --only-wiki          Initialize embedded .llm-wiki and AGENTS.md only
+  --only-wiki          Initialize embedded llm-wiki and AGENTS.md only
                        Use: Fast project wiki setup when tools already installed
 
 Options:
@@ -78,3 +78,4 @@ Configuration Merge (--only-obsidian):
   - community-plugins.json: Merge plugin lists, deduplicate
 EOF
 }
+

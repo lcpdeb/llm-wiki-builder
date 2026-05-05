@@ -1,6 +1,6 @@
-# Stage 5: Initialize Embedded `.llm-wiki`
+﻿# Stage 5: Initialize Embedded `llm-wiki`
 
-This stage initializes the current project as the source material and writes generated wiki scaffold files under `<project>/.llm-wiki`.
+This stage initializes the current project as the source material and writes generated wiki scaffold files under `<project>/llm-wiki`.
 
 It must not create a separate `repo-wiki` directory and must not create or require `raw/`.
 
@@ -16,7 +16,7 @@ Compute:
 
 ```bash
 PROJECT_ROOT="<resolved project root>"
-WIKI_TARGET="$PROJECT_ROOT/.llm-wiki"
+WIKI_TARGET="$PROJECT_ROOT/llm-wiki"
 ```
 
 ## Template Copy
@@ -45,23 +45,23 @@ For `lang=en`:
 mkdir -p "$WIKI_TARGET"/{concepts,summaries,synthesis,archived,assets/excalidraw,canvas,templates}
 ```
 
-There must be no `.llm-wiki/wiki/` and no `raw/`.
+There must be no `llm-wiki/wiki/` and no `raw/`.
 
 ## Placeholder Replacement
 
-Replace `<Wiki Name>`, `<wiki-name>`, and `{{date}}` only in files that were copied into `.llm-wiki/`.
+Replace `<Wiki Name>`, `<wiki-name>`, and `{{date}}` only in files that were copied into `llm-wiki/`.
 
 Chinese files:
 
-- `.llm-wiki/知识库概览.md`
-- `.llm-wiki/Wiki 目录.md`
-- `.llm-wiki/操作日志.md`
+- `llm-wiki/知识库概览.md`
+- `llm-wiki/Wiki 目录.md`
+- `llm-wiki/操作日志.md`
 
 English files:
 
-- `.llm-wiki/Overview.md`
-- `.llm-wiki/Index.md`
-- `.llm-wiki/Changelog.md`
+- `llm-wiki/Overview.md`
+- `llm-wiki/Index.md`
+- `llm-wiki/Changelog.md`
 
 ## `AGENTS.md`
 
@@ -86,16 +86,17 @@ Non-interactive `--yes` defaults to append/update and must not overwrite user co
 The managed block must say:
 
 - The project root is the source material.
-- Output goes under `.llm-wiki/`.
-- Exclude `.llm-wiki/`, `.git/`, `.obsidian/`, dependencies, build outputs, binaries, and secrets.
+- Output goes under `llm-wiki/`.
+- Exclude `llm-wiki/`, `.git/`, `.obsidian/`, dependencies, build outputs, binaries, and secrets.
 - Do not modify project source unless explicitly asked.
 
 ## Verify
 
 After this stage:
 
-- `<project>/.llm-wiki` exists.
+- `<project>/llm-wiki` exists.
 - `<project>/AGENTS.md` exists or sidecar mode wrote `AGENTS.llm-wiki.md`.
-- `.llm-wiki/wiki/` does not exist.
+- `llm-wiki/wiki/` does not exist.
 - `raw/` was not created.
 - Re-running does not duplicate the managed block.
+

@@ -1,8 +1,9 @@
----
+﻿---
 sorting-spec: |-
   target-folder: /
-  .llm-wiki
+  llm-wiki
   .obsidian
   AGENTS.md
   README.md
 ---
+

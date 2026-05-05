@@ -1,4 +1,4 @@
-# Stage 6: Configure Obsidian Project
+﻿# Stage 6: Configure Obsidian Project
 
 This stage configures Obsidian for the project root. `.obsidian/` lives in `<project>/.obsidian`, and Obsidian opens the whole project as the vault.
 
@@ -27,7 +27,7 @@ Preserve existing user keys where possible. Use `jq` for JSON merge when availab
 
 ```json
 {
-  "attachmentFolderPath": ".llm-wiki/assets",
+  "attachmentFolderPath": "llm-wiki/assets",
   "communityPluginsEnabled": true
 }
 ```
@@ -79,3 +79,4 @@ After this stage:
 - `.obsidian/community-plugins.json` keeps old ids and includes installed ids.
 - `.obsidian/app.json` has `communityPluginsEnabled: true`.
 - `.obsidian/appearance.json` does not exist.
+

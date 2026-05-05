@@ -1,10 +1,10 @@
-English | [简体中文](./README.zh-CN.md)
+﻿English | [简体中文](./README.zh-CN.md)
 
 # llm-wiki-builder
 
 One command to initialize an embedded [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) for the current project.
 
-The current project directory is the source material. AI-generated summaries, concepts, and synthesis pages are written directly to `.llm-wiki/`.
+The current project directory is the source material. AI-generated summaries, concepts, and synthesis pages are written directly to `llm-wiki/`.
 
 Auto-detects Claude Code / Codex / Gemini, installs missing base tools, and configures Obsidian + recommended plugins (Skills & Plugins & Shortcuts), so AI can continuously build and maintain your project knowledge system.
 
@@ -21,7 +21,7 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 ```
 > **Windows users**: Run the installer from **Git Bash** (recommended) or **WSL2** — `cmd.exe` and PowerShell cannot execute bash scripts. Install [Git for Windows](https://git-scm.com/download/win) (provides Git Bash + curl), then run `git config --global core.autocrlf input` to avoid `bad interpreter` errors. The installer auto-detects winget / Chocolatey / Scoop to fetch Obsidian, Node.js and Git.
 >
-> Path detection output is persisted once to `.llm-wiki/detected-paths.json` (project-level config). The installer does not export these paths as environment variables.
+> Path detection output is persisted once to `llm-wiki/detected-paths.json` (project-level config). The installer does not export these paths as environment variables.
 
 With options:
 
@@ -29,10 +29,10 @@ With options:
 # Only detect and install global tools (AI agent, Obsidian, NodeJS, Agent Skills, etc.)
 curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash -s -- --only-tools
 
-# Skip global tools detection/installation, only initialize .llm-wiki in the current project
+# Skip global tools detection/installation, only initialize llm-wiki in the current project
 curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash -s -- --only-wiki
 
-# Skip tools and .llm-wiki initialization, only configure Obsidian (plugins, shortcuts) in current project
+# Skip tools and llm-wiki initialization, only configure Obsidian (plugins, shortcuts) in current project
 curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash -s -- --only-obsidian
 ```
 
@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
     The slash command supports all parameters, e.g.:
 
     ```bash
-    # Only initialize .llm-wiki and AGENTS.md, skip tool install
+    # Only initialize llm-wiki and AGENTS.md, skip tool install
     /llm-wiki-builder --only-wiki
 
     # /llm-wiki-builder --bash    # Pipe through bash script — saves tokens
@@ -85,7 +85,7 @@ Supported options (use as needed):
 | `--dir <directory>` | Project directory | Current directory |
 | `--lang <en\|zh>` | Wiki language | `en` |
 | `--only-tools` | Install tools only, without creating wiki | - |
-| `--only-wiki` | Initialize `.llm-wiki` and `AGENTS.md` in the project, without installing tools | - |
+| `--only-wiki` | Initialize `llm-wiki` and `AGENTS.md` in the project, without installing tools | - |
 | `--only-obsidian` | Configure Obsidian in the project root only | - |
 | `--bash` | Used via `/llm-wiki-builder --bash` (gives Agent users a more flexible, token-saving path) | - |
 
@@ -139,7 +139,7 @@ Detects what's already on your system and only installs what's missing.
 
 **Browser Extension (recommended)**
 
-- **[Obsidian Web Clipper](https://chromewebstore.google.com/detail/obsidian-web-clipper/cnjifjpddelmedmihgijeibhnjfabmlf)** — Clip web articles into the project and ask the agent to summarize them into `.llm-wiki/`
+- **[Obsidian Web Clipper](https://chromewebstore.google.com/detail/obsidian-web-clipper/cnjifjpddelmedmihgijeibhnjfabmlf)** — Clip web articles into the project and ask the agent to summarize them into `llm-wiki/`
 
 ## Getting Started
 
@@ -153,15 +153,15 @@ claude
 
 Then chat with the AI:
 
-- **Analyze** → `Analyze this repository and update .llm-wiki`
+- **Analyze** → `Analyze this repository and update llm-wiki`
 - **Query** → `What is the relationship between X and Y?`
-- **Lint** → `Run a health check on .llm-wiki`
+- **Lint** → `Run a health check on llm-wiki`
 
 ## Wiki Structure
 
 ```
 project/
-├── .llm-wiki/               # LLM-maintained analysis output
+├── llm-wiki/               # LLM-maintained analysis output
 │   ├── concepts/            # Concept definition pages
 │   ├── summaries/           # Source material summaries
 │   ├── synthesis/           # Cross-cutting analysis
@@ -174,7 +174,7 @@ project/
 └── <project source files>   # Source material analyzed by the agent
 ```
 
-> **Tip**: The project root is the source layer. The agent writes only to `.llm-wiki/` unless you explicitly ask it to modify project files.
+> **Tip**: The project root is the source layer. The agent writes only to `llm-wiki/` unless you explicitly ask it to modify project files.
 
 ## What is LLM Wiki?
 
@@ -184,7 +184,7 @@ project/
 
 **How it works**: Claude Code, Codex, or Gemini can serve as the AI agent that reads, writes and maintains the wiki; Claude Code is the default priority agent, but not the only supported option. [Obsidian](https://obsidian.md) serves as the visual editor and reader. You chat with the AI to ingest sources, query knowledge, and run health checks — while browsing and navigating the wiki graph in Obsidian.
 
-**Three-layer architecture**: project root (source material) → `.llm-wiki/` (LLM-maintained pages) → Schema (`AGENTS.md`)
+**Three-layer architecture**: project root (source material) → `llm-wiki/` (LLM-maintained pages) → Schema (`AGENTS.md`)
 
 **Three operations**: **Analyze** (build/update knowledge) → **Query** (ask questions) → **Lint** (health check)
 
@@ -192,12 +192,12 @@ project/
 
 This project keeps the upstream LLM Wiki idea, while refactoring the installer and workflow for project-embedded usage.
 
-- Workflow model changed from a separate `repo-wiki` + `raw/wiki` process to an embedded `<project>/.llm-wiki` process.
+- Workflow model changed from a separate `repo-wiki` + `raw/wiki` process to an embedded `<project>/llm-wiki` process.
 - The current project root is now the default source layer; users no longer need to copy materials into `raw/`.
-- Output boundaries were tightened: generated summaries, concepts, synthesis, and logs are written directly under `.llm-wiki/`.
+- Output boundaries were tightened: generated summaries, concepts, synthesis, and logs are written directly under `llm-wiki/`.
 - Re-runs are designed to be idempotent: missing scaffold files are backfilled without deleting existing analysis pages.
 - `AGENTS.md` now uses a managed block to support append/update behavior and avoid duplicate rule injection on repeated runs.
-- Runtime path detection persists once to `.llm-wiki/detected-paths.json` as local project config and is ignored via project-root `.gitignore`.
+- Runtime path detection persists once to `llm-wiki/detected-paths.json` as local project config and is ignored via project-root `.gitignore`.
 - Obsidian setup was adjusted to project-root `.obsidian` configuration and missing-plugin installation only.
 - Theme and base-color mutation behavior was removed (`appearance.json`, `cssTheme`, `accentColor`, Minimal theme settings) to avoid overriding user preferences.
 
@@ -215,3 +215,4 @@ Purpose:
 ## License
 
 [MIT](LICENSE)
+

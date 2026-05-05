@@ -1,4 +1,6 @@
-# Claude Code
-.omc
+﻿.omc
 .team-review
-/.llm-wiki/detected-paths.json
+/llm-wiki/detected-paths.json
+
+.obsidian
+llm-wiki

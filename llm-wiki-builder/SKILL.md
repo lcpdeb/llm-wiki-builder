@@ -1,18 +1,18 @@
----
+﻿---
 name: llm-wiki-builder
 description: |
   Trigger when the user wants to create, scaffold, initialize, or configure an LLM Wiki for the current project.
   Chinese examples: 创建 llm-wiki 知识库, 搭建 wiki, 初始化项目 wiki, 配置 Obsidian wiki.
   English examples: create llm wiki, scaffold llm wiki, set up knowledge base, initialize project wiki, set up obsidian wiki.
 
-  Initializes an embedded `.llm-wiki/` workspace in the current project. The project root remains the source material; generated summaries, concepts, synthesis, visuals, and logs are written under `.llm-wiki/`. Obsidian config and plugins are installed into the project root. The workflow does not create a separate `repo-wiki` vault and does not use `raw/`.
+  Initializes an embedded `llm-wiki/` workspace in the current project. The project root remains the source material; generated summaries, concepts, synthesis, visuals, and logs are written under `llm-wiki/`. Obsidian config and plugins are installed into the project root. The workflow does not create a separate `repo-wiki` vault and does not use `raw/`.
 
   Do not match for Lark/Feishu wiki, hosted wikis such as Notion or Confluence, or generic Obsidian note editing.
 ---
 
 # llm-wiki-builder
 
-Guide the user through setting up an embedded LLM Wiki for a project: detect installed tools, choose a supported AI agent when multiple are present, install missing dependencies where possible, initialize `.llm-wiki/`, create or update `AGENTS.md`, and configure Obsidian for the project root.
+Guide the user through setting up an embedded LLM Wiki for a project: detect installed tools, choose a supported AI agent when multiple are present, install missing dependencies where possible, initialize `llm-wiki/`, create or update `AGENTS.md`, and configure Obsidian for the project root.
 
 The user is already running an AI agent. Do not prompt them to install another AI agent just to use this skill. For installer checks, Claude Code, Codex, and Gemini are supported; if more than one is installed, default priority is Claude Code > Codex > Gemini.
 
@@ -29,10 +29,10 @@ If explicit parameters are provided, do not ask for those values again.
 2. Single-item failures do not block the whole run. Record clear manual follow-up items.
 3. Respect the host OS and shell. Windows via Git Bash is supported first; macOS/Linux use the same public interface.
 4. Use the host CLI's native prompt mechanism for interactive choices.
-5. The workflow is idempotent for the project. Re-runs backfill missing `.llm-wiki/` scaffold files, update the managed `AGENTS.md` block, and do not delete existing wiki pages.
+5. The workflow is idempotent for the project. Re-runs backfill missing `llm-wiki/` scaffold files, update the managed `AGENTS.md` block, and do not delete existing wiki pages.
 6. Never ask the user to copy source material into `raw/`. The project root is the source layer.
 7. Never install or configure Obsidian themes, Minimal theme, Minimal Settings, `appearance.json`, `cssTheme`, or `accentColor`.
-8. Do not initialize a nested git repository for `.llm-wiki/`; it belongs to the existing project.
+8. Do not initialize a nested git repository for `llm-wiki/`; it belongs to the existing project.
 9. Keep generated files UTF-8 with LF line endings.
 
 ## Workflow
@@ -46,7 +46,7 @@ Read the matching reference before acting on a stage.
 | 2 | Base tools | `references/02-install-base.md` |
 | 3 | Agent skills | `references/03-install-skills.md` |
 | 4 | Obsidian app | `references/04-install-obsidian.md` |
-| 5 | Embedded `.llm-wiki` and `AGENTS.md` | `references/05-create-wiki.md` |
+| 5 | Embedded `llm-wiki` and `AGENTS.md` | `references/05-create-wiki.md` |
 | 6 | Obsidian project config and plugins | `references/06-install-plugins.md` |
 | 7 | Final summary | `references/07-finalize.md` |
 
@@ -77,9 +77,9 @@ Read the matching reference before acting on a stage.
 | `--bash` | off | Run upstream `install.sh` non-interactively and forward supported flags. |
 | `--name <display-name>` | project directory name | Display title used in generated wiki pages. |
 | `--lang <en|zh>` | `en` unless prompted | Template language. |
-| `--dir <project>` | current directory | Project root. Output is always `<project>/.llm-wiki`. |
-| `--only-tools` | off | Install/detect tools only. Do not initialize `.llm-wiki` or configure Obsidian. |
-| `--only-wiki` | off | Initialize `.llm-wiki` and `AGENTS.md` only. Do not configure Obsidian. |
+| `--dir <project>` | current directory | Project root. Output is always `<project>/llm-wiki`. |
+| `--only-tools` | off | Install/detect tools only. Do not initialize `llm-wiki` or configure Obsidian. |
+| `--only-wiki` | off | Initialize `llm-wiki` and `AGENTS.md` only. Do not configure Obsidian. |
 | `--only-obsidian` | off | Configure Obsidian app, config, and plugins in the project root. |
 
 ## Agent Rule Expectations
@@ -87,7 +87,8 @@ Read the matching reference before acting on a stage.
 The generated `AGENTS.md` must state:
 
 - Project root is the source material.
-- Analysis output goes directly under `.llm-wiki/`.
-- Exclude `.llm-wiki/`, `.git/`, `.obsidian/`, `node_modules/`, build outputs, binaries, and secret files.
+- Analysis output goes directly under `llm-wiki/`.
+- Exclude `llm-wiki/`, `.git/`, `.obsidian/`, `node_modules/`, build outputs, binaries, and secret files.
 - Do not modify source files unless the user explicitly requests it.
 - Re-running the installer must not duplicate the managed block.
+

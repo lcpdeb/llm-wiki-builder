@@ -1,6 +1,6 @@
-{
+﻿{
   "interfaceFontSize": 14,
-  "attachmentFolderPath": ".llm-wiki/assets",
+  "attachmentFolderPath": "llm-wiki/assets",
   "newLinkFormat": "shortest",
   "useMarkdownLinks": false,
   "showFrontmatter": true,
@@ -13,3 +13,4 @@
   "promptDelete": false,
   "communityPluginsEnabled": true
 }
+

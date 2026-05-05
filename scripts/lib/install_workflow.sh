@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 # UTF-8 (no BOM)
 # llm-wiki-builder — Initialize an embedded project LLM Wiki in one command
 # Author: eleven-net-cn
@@ -8,12 +8,12 @@
 #   bash install.sh [OPTIONS]
 #
 # Modes:
-#   Default:      Install tools → Initialize .llm-wiki → Configure Obsidian
+#   Default:      Install tools → Initialize llm-wiki → Configure Obsidian
 #   --only-tools: Install all tools only (no project changes)
 #   --only-obsidian: Configure Obsidian plugins/config in project root
-#   --only-wiki:  Initialize .llm-wiki and AGENTS.md only
+#   --only-wiki:  Initialize llm-wiki and AGENTS.md only
 #
-# Flow: Detect → Install Tools → Initialize .llm-wiki → Configure Obsidian → Finalize
+# Flow: Detect → Install Tools → Initialize llm-wiki → Configure Obsidian → Finalize
 
 set -euo pipefail
 export LC_MESSAGES=C
@@ -111,6 +111,22 @@ prompt_confirm() {
   [[ "$lower" == "y" || "$lower" == "yes" ]]
 }
 
+normalize_wiki_name() {
+  local raw="${1:-}"
+  local cleaned=""
+  cleaned="$(printf '%s' "$raw" | tr -d '\r\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+  printf '%s\n' "$cleaned"
+}
+
+default_wiki_name() {
+  local root="${PROJECT_ROOT:-$(pwd)}"
+  local name=""
+  name="$(basename "$root" 2>/dev/null || true)"
+  name="$(normalize_wiki_name "$name")"
+  [[ -n "$name" ]] || name="llm-wiki"
+  printf '%s\n' "$name"
+}
+
 # Prompt wiki name with duplicate detection
 prompt_wiki_name() {
   local default_name="$1" result target_dir
@@ -169,21 +185,34 @@ prompt_language() {
 
 resolve_project_context() {
   local requested="${WIKI_DIR:-${LLM_WIKI_DIR:-$(pwd)}}"
+  local resolved_name=""
 
   [[ -d "$requested" ]] || fail "Project directory does not exist: $requested"
 
   PROJECT_ROOT="$(cd "$requested" && pwd)"
-  WIKI_TARGET="$PROJECT_ROOT/.llm-wiki"
-  WIKI_NAME="${WIKI_NAME:-$(basename "$PROJECT_ROOT")}"
+  WIKI_TARGET="$PROJECT_ROOT/llm-wiki"
+  resolved_name="$(normalize_wiki_name "${WIKI_NAME:-}")"
+  if [[ -z "$resolved_name" ]]; then
+    resolved_name="$(default_wiki_name)"
+  fi
+  WIKI_NAME="$resolved_name"
 }
 
 prompt_wiki_title() {
   local default_name="$1"
+  local result=""
+
+  default_name="$(normalize_wiki_name "$default_name")"
+  [[ -n "$default_name" ]] || default_name="$(default_wiki_name)"
+
   if $NON_INTERACTIVE; then
     echo "$default_name"
     return 0
   fi
-  prompt_input "Wiki display name" "$default_name"
+  result="$(prompt_input "Wiki display name" "$default_name")"
+  result="$(normalize_wiki_name "$result")"
+  [[ -n "$result" ]] || result="$default_name"
+  echo "$result"
 }
 
 copy_tree_missing() {
@@ -1094,23 +1123,25 @@ download_template() {
 
 render_agents_managed_block() {
   local name="$1"
+  name="$(normalize_wiki_name "$name")"
+  [[ -n "$name" ]] || name="$(default_wiki_name)"
 
   if [[ "$WIKI_LANG" == "zh" ]]; then
     cat <<EOF
 <!-- llm-wiki-builder:start -->
 ## LLM Wiki 工作区
 
-本项目使用 \`.llm-wiki/\` 作为内嵌 LLM Wiki。当前项目根目录就是源材料；不要要求用户把代码或文档复制到 \`raw/\`。
+本项目使用 \`llm-wiki/\` 作为内嵌 LLM Wiki。当前项目根目录就是源材料；不要要求用户把代码或文档复制到 \`raw/\`。
 
 ### 读取范围
 - 读取项目根目录中的代码、文档和配置作为分析材料。
-- 默认排除 \`.llm-wiki/\`、\`.git/\`、\`.obsidian/\`、\`node_modules/\`、\`vendor/\`、\`dist/\`、\`build/\`、\`.next/\`、\`target/\`、二进制大文件和 \`.env*\` 等密钥文件。
+- 默认排除 \`llm-wiki/\`、\`.git/\`、\`.obsidian/\`、\`node_modules/\`、\`vendor/\`、\`dist/\`、\`build/\`、\`.next/\`、\`target/\`、二进制大文件和 \`.env*\` 等密钥文件。
 
 ### 写入范围
-- 分析输出只能写入 \`.llm-wiki/\`。
+- 分析输出只能写入 \`llm-wiki/\`。
 - 除非用户明确要求，不修改项目源码、原始文档或配置文件。
-- 摘要放入 \`.llm-wiki/资料摘要/\`，概念页放入 \`.llm-wiki/概念/\`，综合分析放入 \`.llm-wiki/综合分析/\`，图表资源放入 \`.llm-wiki/assets/\` 或 \`.llm-wiki/canvas/\`。
-- 每次分析后更新 \`.llm-wiki/Wiki 目录.md\` 和 \`.llm-wiki/操作日志.md\`。
+- 摘要放入 \`llm-wiki/资料摘要/\`，概念页放入 \`llm-wiki/概念/\`，综合分析放入 \`llm-wiki/综合分析/\`，图表资源放入 \`llm-wiki/assets/\` 或 \`llm-wiki/canvas/\`。
+- 每次分析后更新 \`llm-wiki/Wiki 目录.md\` 和 \`llm-wiki/操作日志.md\`。
 
 ### 项目名称
 - Wiki 名称：${name}
@@ -1121,17 +1152,17 @@ EOF
 <!-- llm-wiki-builder:start -->
 ## LLM Wiki Workspace
 
-This project uses \`.llm-wiki/\` as an embedded LLM Wiki. The current project root is the source material; do not ask the user to copy code or docs into \`raw/\`.
+This project uses \`llm-wiki/\` as an embedded LLM Wiki. The current project root is the source material; do not ask the user to copy code or docs into \`raw/\`.
 
 ### Read Scope
 - Read code, docs, and configuration from the project root as source material.
-- Exclude \`.llm-wiki/\`, \`.git/\`, \`.obsidian/\`, \`node_modules/\`, \`vendor/\`, \`dist/\`, \`build/\`, \`.next/\`, \`target/\`, large binaries, and secret files such as \`.env*\`.
+- Exclude \`llm-wiki/\`, \`.git/\`, \`.obsidian/\`, \`node_modules/\`, \`vendor/\`, \`dist/\`, \`build/\`, \`.next/\`, \`target/\`, large binaries, and secret files such as \`.env*\`.
 
 ### Write Scope
-- Write analysis output only under \`.llm-wiki/\`.
+- Write analysis output only under \`llm-wiki/\`.
 - Do not modify source code, original docs, or project configuration unless the user explicitly asks.
-- Put source summaries in \`.llm-wiki/summaries/\`, concept pages in \`.llm-wiki/concepts/\`, synthesis in \`.llm-wiki/synthesis/\`, and visual assets in \`.llm-wiki/assets/\` or \`.llm-wiki/canvas/\`.
-- After each analysis, update \`.llm-wiki/Index.md\` and \`.llm-wiki/Changelog.md\`.
+- Put source summaries in \`llm-wiki/summaries/\`, concept pages in \`llm-wiki/concepts/\`, synthesis in \`llm-wiki/synthesis/\`, and visual assets in \`llm-wiki/assets/\` or \`llm-wiki/canvas/\`.
+- After each analysis, update \`llm-wiki/Index.md\` and \`llm-wiki/Changelog.md\`.
 
 ### Project Name
 - Wiki name: ${name}
@@ -1203,6 +1234,13 @@ ensure_project_agents() {
   local sidecar_file="$project_root/AGENTS.llm-wiki.md"
   local block_file action ts has_start=false has_end=false has_block=false
 
+  name="$(normalize_wiki_name "$name")"
+  if [[ -z "$name" ]]; then
+    name="$(basename "$project_root" 2>/dev/null || true)"
+    name="$(normalize_wiki_name "$name")"
+  fi
+  [[ -n "$name" ]] || name="llm-wiki"
+
   block_file="$(mktemp)"
   render_agents_managed_block "$name" > "$block_file"
 
@@ -1257,7 +1295,7 @@ prepare_wiki() {
     download_template
   fi
 
-  info "Initializing embedded .llm-wiki..."
+  info "Initializing embedded llm-wiki..."
   mkdir -p "$target"
 
   # Keep existing analysis pages; only backfill missing scaffold files.
@@ -1275,12 +1313,6 @@ prepare_wiki() {
   for d in "${base_dirs[@]}" "${lang_dirs[@]}"; do
     mkdir -p "$target/$d"
   done
-
-  if [[ ! -f "$target/.gitignore" ]]; then
-    cat > "$target/.gitignore" <<'EOF'
-detected-paths.json
-EOF
-  fi
 
   success "LLM Wiki initialized: ${CYAN}$(rel_path "$target")${RESET}"
 }
@@ -1321,7 +1353,7 @@ _spinner() {
 }
 
 obsidian_plugin_cache_root() {
-  printf '%s\n' "$HOME/.llm-wiki/plugin-cache"
+  printf '%s\n' "$HOME/llm-wiki/plugin-cache"
 }
 
 obsidian_plugin_cache_dir() {
@@ -1692,7 +1724,9 @@ setup_wiki() {
   info "Set up embedded LLM Wiki:"
   WIKI_LANG=$(prompt_language)
   WIKI_NAME="$(prompt_wiki_title "$WIKI_NAME")"
-  WIKI_TARGET="$PROJECT_ROOT/.llm-wiki"
+  WIKI_NAME="$(normalize_wiki_name "$WIKI_NAME")"
+  [[ -n "$WIKI_NAME" ]] || WIKI_NAME="$(default_wiki_name)"
+  WIKI_TARGET="$PROJECT_ROOT/llm-wiki"
   info "Project: ${CYAN}$(rel_path "$PROJECT_ROOT")${RESET}"
   info "Output: ${CYAN}$(rel_path "$WIKI_TARGET")${RESET}"
 
@@ -1721,11 +1755,11 @@ print_success() {
   printf "${SUCCESS}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
 
   printf "\n${BOLD}Operations ${DIM}(inside your AI agent)${RESET}${BOLD}:${RESET}\n\n"
-  printf "  ${MAGENTA}${BOLD}1. Analyze${RESET} ${DIM}→${RESET}  ${BLUE}Analyze this repository and update .llm-wiki${RESET}\n"
+  printf "  ${MAGENTA}${BOLD}1. Analyze${RESET} ${DIM}→${RESET}  ${BLUE}Analyze this repository and update llm-wiki${RESET}\n"
   printf "             ${DIM}Use the current project as source material${RESET}\n"
   printf "  ${MAGENTA}${BOLD}2. Query${RESET}   ${DIM}→${RESET}  ${BLUE}What does this repository do?${RESET}\n"
-  printf "             ${DIM}Ask questions, get answers with .llm-wiki citations${RESET}\n"
-  printf "  ${MAGENTA}${BOLD}3. Lint${RESET}    ${DIM}→${RESET}  ${BLUE}Run a health check on .llm-wiki${RESET}\n"
+  printf "             ${DIM}Ask questions, get answers with llm-wiki citations${RESET}\n"
+  printf "  ${MAGENTA}${BOLD}3. Lint${RESET}    ${DIM}→${RESET}  ${BLUE}Run a health check on llm-wiki${RESET}\n"
   printf "             ${DIM}Find orphans, stale pages, and missing concepts${RESET}\n"
 
   printf "\n${BOLD}Quick start:${RESET}\n\n"
@@ -1797,12 +1831,12 @@ Usage:
   bash install.sh --only-wiki [--dir <project>] [--name <name>] [OPTIONS]
 
 Modes:
-  Default              Install tools → Initialize .llm-wiki → Configure Obsidian
+  Default              Install tools → Initialize llm-wiki → Configure Obsidian
   --only-tools         Install all tools only (no wiki creation)
                        Use: Add tools to existing environment without creating wiki
   --only-obsidian      Install Obsidian software + plugins + config in project root
                        Use: Configure Obsidian for the current project
-  --only-wiki          Initialize embedded .llm-wiki and AGENTS.md only
+  --only-wiki          Initialize embedded llm-wiki and AGENTS.md only
                        Use: Fast project wiki setup when tools already installed
 
 Options:
@@ -1963,8 +1997,8 @@ main() {
   fi
 
   if $ONLY_WIKI; then
-    info "Mode: ${GREEN}--only-wiki${RESET} (initialize embedded .llm-wiki only)"
-    stepn "1" "2" "Initializing .llm-wiki"
+    info "Mode: ${GREEN}--only-wiki${RESET} (initialize embedded llm-wiki only)"
+    stepn "1" "2" "Initializing llm-wiki"
     setup_wiki
 
     stepn "2" "2" "Finalizing"
@@ -2006,7 +2040,7 @@ main() {
     fi
   fi
 
-  stepn "$current_step" "$total_steps" "Initializing .llm-wiki"
+  stepn "$current_step" "$total_steps" "Initializing llm-wiki"
   setup_wiki
   current_step=$((current_step + 1))
 
@@ -2018,3 +2052,4 @@ main() {
   cleanup_installer
   print_success "$WIKI_NAME" "$WIKI_TARGET"
 }
+

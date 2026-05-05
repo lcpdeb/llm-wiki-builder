@@ -1,10 +1,10 @@
-[English](./README.md) | 简体中文
+﻿[English](./README.md) | 简体中文
 
 # llm-wiki-builder
 
 一条命令为当前项目初始化内嵌的 [Andrej Karpathy 的 LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) AI 知识库。
 
-当前项目目录本身就是源材料；AI 生成的摘要、概念页和综合分析会直接写入 `.llm-wiki/`。
+当前项目目录本身就是源材料；AI 生成的摘要、概念页和综合分析会直接写入 `llm-wiki/`。
 
 自动检测 Claude Code / Codex / Gemini，安装缺失的基础工具，并配置 Obsidian + 推荐的插件（Skills & Plugins & 快捷键）等，让 AI 帮你持续积累和维护项目知识体系。
 
@@ -21,7 +21,7 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 ```
 > **Windows 用户**：安装脚本是 bash 脚本，请在 **Git Bash**（推荐）或 **WSL2** 中执行 —— `cmd.exe` 与 PowerShell 无法运行 bash。先安装 [Git for Windows](https://git-scm.com/download/win)（自带 Git Bash + curl），再执行 `git config --global core.autocrlf input` 避免 `bad interpreter` 错误。脚本会自动检测 winget / Chocolatey / Scoop 来安装 Obsidian、Node.js、Git。
 >
-> 路径检测结果会首次写入 `.llm-wiki/detected-paths.json`（项目级配置），不会导出为环境变量。
+> 路径检测结果会首次写入 `llm-wiki/detected-paths.json`（项目级配置），不会导出为环境变量。
 
 参数示例：
 
@@ -29,10 +29,10 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 # 仅检测、安装全局工具套件（AI Agent、Obsidian、NodeJS、Agent Skills 等）
 curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash -s -- --only-tools
 
-# 跳过全局工具套件的检测、安装，仅在当前项目初始化 .llm-wiki
+# 跳过全局工具套件的检测、安装，仅在当前项目初始化 llm-wiki
 curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash -s -- --only-wiki
 
-# 跳过全局工具套件检测和 .llm-wiki 初始化，仅在当前项目配置 Obsidian 插件、快捷键等配置
+# 跳过全局工具套件检测和 llm-wiki 初始化，仅在当前项目配置 Obsidian 插件、快捷键等配置
 curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash -s -- --only-obsidian
 ```
 
@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
     Agent Command 命令也支持所有参数，示例：
 
     ```bash
-    # 仅初始化 .llm-wiki 和 AGENTS.md，不安装工具
+    # 仅初始化 llm-wiki 和 AGENTS.md，不安装工具
     /llm-wiki-builder --only-wiki
 
     # /llm-wiki-builder --bash    # 走 bash 脚本创建，更节省 Token
@@ -85,7 +85,7 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 | `--dir <directory>` | 项目目录 | 当前目录 |
 | `--lang <en\|zh>` | Wiki 语言 | `en` |
 | `--only-tools` | 仅安装工具套件，不创建 wiki 知识库 | - |
-| `--only-wiki` | 仅在项目中初始化 `.llm-wiki` 和 `AGENTS.md`，不安装工具 | - |
+| `--only-wiki` | 仅在项目中初始化 `llm-wiki` 和 `AGENTS.md`，不安装工具 | - |
 | `--only-obsidian` | 仅在项目根目录配置 Obsidian | - |
 | `--bash` | 通过 `/llm-wiki-builder --bash` 命令使用（提供更灵活的 Agent 使用方式） | - |
 
@@ -139,7 +139,7 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 
 **浏览器扩展（推荐使用，不会自动安装）**
 
-- **[Obsidian Web Clipper](https://chromewebstore.google.com/detail/obsidian-web-clipper/cnjifjpddelmedmihgijeibhnjfabmlf)** — 将网页文章剪藏到项目中，再让 Agent 汇总到 `.llm-wiki/`
+- **[Obsidian Web Clipper](https://chromewebstore.google.com/detail/obsidian-web-clipper/cnjifjpddelmedmihgijeibhnjfabmlf)** — 将网页文章剪藏到项目中，再让 Agent 汇总到 `llm-wiki/`
 
 ## 开始使用
 
@@ -153,15 +153,15 @@ claude
 
 然后与 AI 对话：
 
-- **分析** → `分析这个仓库并更新 .llm-wiki`
+- **分析** → `分析这个仓库并更新 llm-wiki`
 - **查询** → `X 和 Y 之间有什么关系？`
-- **巡检** → `运行一次 .llm-wiki 巡检`
+- **巡检** → `运行一次 llm-wiki 巡检`
 
 ## 知识库结构
 
 ```
 project/
-├── .llm-wiki/               # LLM 维护的分析输出
+├── llm-wiki/               # LLM 维护的分析输出
 │   ├── 概念/                 # 概念定义页
 │   ├── 资料摘要/             # 资料摘要页
 │   ├── 综合分析/             # 交叉分析
@@ -174,7 +174,7 @@ project/
 └── <项目源码和文档>           # Agent 读取的源材料
 ```
 
-> **提示**：项目根目录就是源材料层。除非你明确要求，Agent 只把分析结果写入 `.llm-wiki/`。
+> **提示**：项目根目录就是源材料层。除非你明确要求，Agent 只把分析结果写入 `llm-wiki/`。
 
 ## 什么是 LLM Wiki？
 
@@ -184,7 +184,7 @@ project/
 
 **工作方式**：Claude Code、Codex 或 Gemini 都可以作为 AI Agent 负责读写和维护 wiki；Claude Code 是默认优先 Agent，但不是唯一可用 Agent。[Obsidian](https://obsidian.md) 作为可视化编辑器和阅读器。你通过与 AI 对话来摄取资料、查询知识、运行巡检 —— 同时在 Obsidian 中浏览和导航知识图谱。
 
-**三层架构**：项目根目录（源材料）→ `.llm-wiki/`（LLM 维护的页面）→ Schema（`AGENTS.md`）
+**三层架构**：项目根目录（源材料）→ `llm-wiki/`（LLM 维护的页面）→ Schema（`AGENTS.md`）
 
 **三大操作**：**Analyze**（分析/更新知识）→ **Query**（查询）→ **Lint**（巡检）
 
@@ -192,12 +192,12 @@ project/
 
 本项目延续上游 LLM Wiki 思路，同时围绕“项目内嵌使用”对安装器与工作流做了较大重构。
 
-- 工作流从独立 `repo-wiki` + `raw/wiki` 模式，改为内嵌 `<project>/.llm-wiki` 模式。
+- 工作流从独立 `repo-wiki` + `raw/wiki` 模式，改为内嵌 `<project>/llm-wiki` 模式。
 - 当前项目根目录成为默认源材料层，不再要求手动把资料复制到 `raw/`。
-- 输出边界收敛到 `.llm-wiki/`：摘要、概念页、综合分析、日志直接写入该目录。
+- 输出边界收敛到 `llm-wiki/`：摘要、概念页、综合分析、日志直接写入该目录。
 - 重复执行强调幂等：补齐缺失脚手架，不删除已有分析内容。
 - `AGENTS.md` 改为受管理区块，支持追加/更新，避免重复运行时重复注入规则。
-- 路径检测结果首次落盘到 `.llm-wiki/detected-paths.json`，作为项目本地配置；并通过项目根 `.gitignore` 忽略。
+- 路径检测结果首次落盘到 `llm-wiki/detected-paths.json`，作为项目本地配置；并通过项目根 `.gitignore` 忽略。
 - Obsidian 调整为项目根 `.obsidian` 配置与缺失插件补齐。
 - 移除主题与配色强制改写（`appearance.json`、`cssTheme`、`accentColor`、Minimal 主题相关设置），避免覆盖用户偏好。
 
@@ -216,3 +216,4 @@ project/
 ## License
 
 [MIT](LICENSE)
+
