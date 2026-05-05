@@ -14,6 +14,15 @@
 
 Ignore `llm-wiki/`, `.git/`, `.obsidian/`, `node_modules/`, `vendor/`, `dist/`, `build/`, `.next/`, `target/`, generated caches, binary files, archives, and secret files such as `.env*`.
 
+## Graphify Map Layer (Optional)
+
+When Graphify is enabled, `graphify-out/` is the structural map layer and `llm-wiki/` is the durable knowledge layer.
+
+- When `graphify-out/GRAPH_REPORT.md` exists, read it first for architecture, dependency, module relationship, and cross-file connection questions.
+- Use `graphify-out/graph.json` or Graphify query commands when useful, then verify important conclusions against source files.
+- Do not automatically merge Graphify `--wiki` output into `llm-wiki/`.
+- Store reusable, verified explanations in `llm-wiki/summaries/`, `llm-wiki/concepts/`, or `llm-wiki/synthesis/`.
+
 ## Directory Structure
 
 ```text

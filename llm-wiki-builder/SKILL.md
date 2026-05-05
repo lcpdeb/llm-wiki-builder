@@ -6,6 +6,7 @@ description: |
   English examples: create llm wiki, scaffold llm wiki, set up knowledge base, initialize project wiki, set up obsidian wiki.
 
   Initializes an embedded `llm-wiki/` workspace in the current project. The project root remains the source material; generated summaries, concepts, synthesis, visuals, and logs are written under `llm-wiki/`. Obsidian config and plugins are installed into the project root. The workflow does not create a separate `repo-wiki` vault and does not use `raw/`.
+  Optional `--with-graphify` installs/registers Graphify as a separate project map layer under `graphify-out/` and keeps `llm-wiki/` as the durable wiki layer.
 
   Do not match for Lark/Feishu wiki, hosted wikis such as Notion or Confluence, or generic Obsidian note editing.
 ---
@@ -19,7 +20,7 @@ The user is already running an AI agent. Do not prompt them to install another A
 ## When To Use
 
 - Natural language requests such as "创建 llm-wiki 知识库", "搭建本地知识库", "create llm wiki", "scaffold llm wiki", or "set up knowledge base".
-- Explicit command: `/llm-wiki-builder` with optional flags: `--bash`, `--name <display-name>`, `--lang <en|zh>`, `--dir <project>`, `--only-tools`, `--only-wiki`, `--only-obsidian`.
+- Explicit command: `/llm-wiki-builder` with optional flags: `--bash`, `--name <display-name>`, `--lang <en|zh>`, `--dir <project>`, `--only-tools`, `--only-wiki`, `--only-obsidian`, `--with-graphify`, `--yes`.
 
 If explicit parameters are provided, do not ask for those values again.
 
@@ -34,6 +35,7 @@ If explicit parameters are provided, do not ask for those values again.
 7. Never install or configure Obsidian themes, Minimal theme, Minimal Settings, `appearance.json`, `cssTheme`, or `accentColor`.
 8. Do not initialize a nested git repository for `llm-wiki/`; it belongs to the existing project.
 9. Keep generated files UTF-8 with LF line endings.
+10. When Graphify is enabled, keep `graphify-out/` separate from `llm-wiki/`; do not merge Graphify `--wiki` output into the embedded wiki.
 
 ## Workflow
 
@@ -56,7 +58,7 @@ Read the matching reference before acting on a stage.
 2. If triggered by bare `/llm-wiki-builder` with no parameters, print one concise parameter hint:
 
    ```text
-   Parameters (optional): --bash  --name <display-name>  --lang <en|zh>  --dir <project>  --only-tools  --only-wiki  --only-obsidian
+   Parameters (optional): --bash  --name <display-name>  --lang <en|zh>  --dir <project>  --only-tools  --only-wiki  --only-obsidian  --with-graphify
    No params given; continuing interactively.
    ```
 
@@ -81,6 +83,8 @@ Read the matching reference before acting on a stage.
 | `--only-tools` | off | Install/detect tools only. Do not initialize `llm-wiki` or configure Obsidian. |
 | `--only-wiki` | off | Initialize `llm-wiki` and `AGENTS.md` only. Do not configure Obsidian. |
 | `--only-obsidian` | off | Configure Obsidian app, config, and plugins in the project root. |
+| `--with-graphify` | off | Install/register Graphify, add `.graphifyignore`, and add Graphify map-layer rules to `AGENTS.md`. |
+| `--yes` / `-y` | off | Use non-interactive defaults. Must not modify global config such as `~/.codex/config.toml`. |
 
 ## Agent Rule Expectations
 
@@ -91,4 +95,5 @@ The generated `AGENTS.md` must state:
 - Exclude `llm-wiki/`, `.git/`, `.obsidian/`, `node_modules/`, build outputs, binaries, and secret files.
 - Do not modify source files unless the user explicitly requests it.
 - Re-running the installer must not duplicate the managed block.
+- When Graphify is enabled, `graphify-out/GRAPH_REPORT.md` should be consulted first for architecture and relationship questions, then durable conclusions should still be written under `llm-wiki/`.
 

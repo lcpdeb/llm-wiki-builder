@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # UTF-8 (no BOM)
 
 parse_args() {
@@ -14,9 +14,11 @@ parse_args() {
         shift 2
         ;;
       --skip-install)    SKIP_INSTALL=true; shift ;;
+      --yes|-y)          NON_INTERACTIVE=true; shift ;;
       --only-tools)      ONLY_TOOLS=true; shift ;;
       --only-obsidian)   ONLY_OBSIDIAN=true; shift ;;
       --only-wiki)       ONLY_WIKI=true; shift ;;
+      --with-graphify)   WITH_GRAPHIFY=true; shift ;;
       --help|-h)         usage; exit 0 ;;
       --version|-v)      echo "llm-wiki-builder v$VERSION"; exit 0 ;;
       *)                 fail "Unknown option: $1" ;;
@@ -29,6 +31,9 @@ parse_args() {
   $ONLY_WIKI && mode_count=$((mode_count + 1))
   if [[ $mode_count -gt 1 ]]; then
     fail "Cannot use multiple mode flags together (--only-tools, --only-obsidian, --only-wiki)"
+  fi
+  if $ONLY_OBSIDIAN && $WITH_GRAPHIFY; then
+    fail "Cannot use --with-graphify with --only-obsidian"
   fi
 }
 
@@ -57,6 +62,8 @@ Options:
   --dir <directory>    Project directory (default: current directory)
   --lang <zh|en>       Wiki language (default: en)
   --skip-install       Skip tool installation in default mode
+  --with-graphify      Install/register Graphify and add project graph rules
+  --yes, -y            Non-interactive mode; use defaults and never edit global config without an explicit prompt
   --help               Show this help
   --version            Show version
 
@@ -68,6 +75,7 @@ Examples:
   bash install.sh --only-tools
   bash install.sh --only-obsidian --dir ~/code/my-project
   bash install.sh --only-wiki --dir ~/code/my-project --name my-project-wiki
+  bash install.sh --with-graphify
 
 Configuration Merge (--only-obsidian):
   When target has existing Obsidian config, new settings are merged:

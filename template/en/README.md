@@ -35,6 +35,13 @@ Run a health check on llm-wiki
 Find stale pages and missing links
 ```
 
+### Map (Optional Graphify)
+
+```text
+/graphify .
+$graphify .   # Codex
+```
+
 ## Structure
 
 - `llm-wiki/` - AI-maintained analysis output
@@ -43,6 +50,7 @@ Find stale pages and missing links
 - `llm-wiki/synthesis/` - cross-cutting analysis
 - `llm-wiki/assets/` - attachments and diagrams
 - `llm-wiki/canvas/` - Obsidian Canvas files
+- `graphify-out/` - optional Graphify map output
 - `.obsidian/` - Obsidian config and plugins
 - `AGENTS.md` - shared rules for AI agents
 

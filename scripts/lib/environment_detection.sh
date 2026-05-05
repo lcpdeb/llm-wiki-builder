@@ -46,9 +46,15 @@ detect_installed() {
   HAS_AI_AGENT=false
   HAS_OBSIDIAN_SKILLS=false
   HAS_VISUAL_SKILLS=false
+  HAS_PYTHON=false
+  HAS_GRAPHIFY_PYTHON=false  # Python 3.10+ compatible with Graphify
+  HAS_GRAPHIFY=false
   AVAILABLE_AI_AGENT_KEYS=()
   VER_GIT=""
   VER_NODE=""
+  VER_PYTHON=""
+  PYTHON_BIN=""
+  GRAPHIFY_PATH=""
 
   if declare -F detect_runtime_paths >/dev/null 2>&1; then
     detect_runtime_paths
@@ -83,22 +89,38 @@ detect_installed() {
   fi
 
   detect_selected_agent_skills
+
+  if $WITH_GRAPHIFY; then
+    detect_graphify
+  fi
 }
 
 print_detection_results() {
   printf "\n"
-  $HAS_AI_AGENT && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}installed: %s${RESET}\n" "AI Agent" "$SELECTED_AI_AGENT_NAME" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}recommended: %s${RESET}\n" "AI Agent" "$(agent_names_joined " / ")"
-  $HAS_NODE && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}%s${RESET}\n" "Node.js" "$VER_NODE" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}required for skills / agent CLIs${RESET}\n" "Node.js"
-  $HAS_OBSIDIAN && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}installed${RESET}\n" "Obsidian" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}wiki editor${RESET}\n" "Obsidian"
-  $HAS_OBSIDIAN_SKILLS && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}%s${RESET}\n" "Obsidian Skills" "$(skills_status_text "OBSIDIAN")" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}%s${RESET}\n" "Obsidian Skills" "$(skills_status_text "OBSIDIAN")"
-  $HAS_VISUAL_SKILLS && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}%s${RESET}\n" "Visual Skills" "$(skills_status_text "VISUAL")" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}%s${RESET}\n" "Visual Skills" "$(skills_status_text "VISUAL")"
-  $HAS_GIT && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}%s${RESET}\n" "Git" "$VER_GIT" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}optional, for versioning${RESET}\n" "Git"
-  printf "  ${GREEN}→${RESET}  %-20s ${DIM}auto-configured with wiki${RESET}\n" "Obsidian Plugins"
+  $HAS_AI_AGENT && printf "  ${GREEN}OK${RESET}  %-20s ${DIM}installed: %s${RESET}\n" "AI Agent" "$SELECTED_AI_AGENT_NAME" || printf "  ${YELLOW}NO${RESET}  %-20s ${CYAN}recommended: %s${RESET}\n" "AI Agent" "$(agent_names_joined " / ")"
+  $HAS_NODE && printf "  ${GREEN}OK${RESET}  %-20s ${DIM}%s${RESET}\n" "Node.js" "$VER_NODE" || printf "  ${YELLOW}NO${RESET}  %-20s ${CYAN}required for skills / agent CLIs${RESET}\n" "Node.js"
+  $HAS_OBSIDIAN && printf "  ${GREEN}OK${RESET}  %-20s ${DIM}installed${RESET}\n" "Obsidian" || printf "  ${YELLOW}NO${RESET}  %-20s ${CYAN}wiki editor${RESET}\n" "Obsidian"
+  $HAS_OBSIDIAN_SKILLS && printf "  ${GREEN}OK${RESET}  %-20s ${DIM}%s${RESET}\n" "Obsidian Skills" "$(skills_status_text "OBSIDIAN")" || printf "  ${YELLOW}NO${RESET}  %-20s ${CYAN}%s${RESET}\n" "Obsidian Skills" "$(skills_status_text "OBSIDIAN")"
+  $HAS_VISUAL_SKILLS && printf "  ${GREEN}OK${RESET}  %-20s ${DIM}%s${RESET}\n" "Visual Skills" "$(skills_status_text "VISUAL")" || printf "  ${YELLOW}NO${RESET}  %-20s ${CYAN}%s${RESET}\n" "Visual Skills" "$(skills_status_text "VISUAL")"
+  $HAS_GIT && printf "  ${GREEN}OK${RESET}  %-20s ${DIM}%s${RESET}\n" "Git" "$VER_GIT" || printf "  ${YELLOW}NO${RESET}  %-20s ${CYAN}optional, for versioning${RESET}\n" "Git"
+
+  if $WITH_GRAPHIFY; then
+    if $HAS_GRAPHIFY_PYTHON; then
+      printf "  ${GREEN}OK${RESET}  %-20s ${DIM}%s (%s)${RESET}\n" "Python" "$VER_PYTHON" "$PYTHON_BIN"
+    elif $HAS_PYTHON; then
+      printf "  ${YELLOW}NO${RESET}  %-20s ${CYAN}%s detected; Python 3.10+ required${RESET}\n" "Python" "$VER_PYTHON"
+    else
+      printf "  ${YELLOW}NO${RESET}  %-20s ${CYAN}required by Graphify (3.10+)${RESET}\n" "Python"
+    fi
+    $HAS_GRAPHIFY && printf "  ${GREEN}OK${RESET}  %-20s ${DIM}%s${RESET}\n" "Graphify" "$GRAPHIFY_PATH" || printf "  ${YELLOW}NO${RESET}  %-20s ${CYAN}optional map layer (package: graphifyy)${RESET}\n" "Graphify"
+  fi
+
+  printf "  ${GREEN}->${RESET}  %-20s ${DIM}auto-configured with wiki${RESET}\n" "Obsidian Plugins"
   printf "\n"
 }
 
 is_all_installed() {
-  $HAS_OBSIDIAN && $HAS_NODE && $HAS_AI_AGENT && $HAS_OBSIDIAN_SKILLS && $HAS_VISUAL_SKILLS && $HAS_GIT
+  $HAS_OBSIDIAN && $HAS_NODE && $HAS_AI_AGENT && $HAS_OBSIDIAN_SKILLS && $HAS_VISUAL_SKILLS && $HAS_GIT && { ! $WITH_GRAPHIFY || $HAS_GRAPHIFY; }
 }
 
 print_manual_guide() {
@@ -131,6 +153,10 @@ print_manual_guide() {
     printf "  %-20s ${DIM}link %s/<skill> -> %s/<skill>${RESET}\n" "" "${global_skills_root_v:-~/.agents/skills}" "${skills_root_v:-<selected agent skills dir>}"
   fi
   $HAS_GIT || printf "  %-20s ${DIM}${UNDERLINE}https://git-scm.com${RESET}\n" "Git"
+  if $WITH_GRAPHIFY; then
+    $HAS_GRAPHIFY_PYTHON || printf "  %-20s ${DIM}${UNDERLINE}https://www.python.org/downloads/${RESET} ${DIM}(3.10+ required by Graphify)${RESET}\n" "Python"
+    $HAS_GRAPHIFY || printf "  %-20s ${GREEN}pip install graphifyy && graphify install${RESET}\n" "Graphify"
+  fi
   printf "  %-20s ${DIM}${UNDERLINE}https://obsidian.md/clip${RESET} ${DIM}(save web pages to wiki)${RESET}\n" "Web Clipper"
   printf "\n"
 }

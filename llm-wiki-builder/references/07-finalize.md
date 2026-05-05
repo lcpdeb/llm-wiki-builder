@@ -16,6 +16,7 @@ Configured:
   ✓ llm-wiki scaffold
   ✓ AGENTS.md managed block
   ✓ Obsidian plugins and config   # only if this stage ran
+  ✓ Graphify map layer            # only if --with-graphify ran
   ✓ detected paths saved once to llm-wiki/detected-paths.json
 
 Manual install required:
@@ -26,6 +27,7 @@ Quick start:
   2. Open this project in Obsidian
   3. Start your AI agent
   4. Ask: "Analyze this repository and update llm-wiki"
+  5. If Graphify is enabled, run "/graphify ." or "$graphify ." in Codex when you want to build/update graphify-out
 ```
 
 Drop empty sections. Do not add extra re-run tips after the summary.

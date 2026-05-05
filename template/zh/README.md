@@ -35,6 +35,13 @@ A 模块和 B 模块是什么关系？
 找出过时页面和缺失链接
 ```
 
+### 地图（可选 Graphify）
+
+```text
+/graphify .
+$graphify .   # Codex
+```
+
 ## 目录结构
 
 - `llm-wiki/` - AI 维护的分析输出
@@ -43,6 +50,7 @@ A 模块和 B 模块是什么关系？
 - `llm-wiki/综合分析/` - 综合解读
 - `llm-wiki/assets/` - 附件和图表
 - `llm-wiki/canvas/` - Obsidian Canvas 文件
+- `graphify-out/` - 可选 Graphify 地图输出
 - `.obsidian/` - Obsidian 配置和插件
 - `AGENTS.md` - AI Agent 共享规则
 

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # UTF-8 (no BOM)
 # Detect local executable/app paths and persist once to llm-wiki/detected-paths.json
 

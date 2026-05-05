@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # UTF-8 (no BOM)
 # llm-wiki-builder — Initialize an embedded project LLM Wiki in one command
 # Author: eleven-net-cn
@@ -51,6 +51,9 @@ HAS_OBSIDIAN=false
 HAS_AI_AGENT=false
 HAS_OBSIDIAN_SKILLS=false
 HAS_VISUAL_SKILLS=false
+HAS_PYTHON=false
+HAS_GRAPHIFY_PYTHON=false  # Python 3.10+ compatible with Graphify
+HAS_GRAPHIFY=false
 AVAILABLE_AI_AGENT_KEYS=()
 AI_AGENT_SELECTION_DONE=false
 SELECTED_AI_AGENT_KEY=""
@@ -60,6 +63,13 @@ SELECTED_AI_AGENT_PATH=""
 # Version strings (set by detect_installed)
 VER_GIT=""
 VER_NODE=""
+VER_PYTHON=""
+PYTHON_BIN=""
+GRAPHIFY_PATH=""
+GRAPHIFY_REGISTERED=false
+
+# Optional Graphify integration
+WITH_GRAPHIFY=false
 
 # ─── Colors (auto-disable for non-TTY) ───────────────────────────────────────
 
@@ -269,9 +279,15 @@ detect_installed() {
   HAS_AI_AGENT=false
   HAS_OBSIDIAN_SKILLS=false
   HAS_VISUAL_SKILLS=false
+  HAS_PYTHON=false
+  HAS_GRAPHIFY_PYTHON=false
+  HAS_GRAPHIFY=false
   AVAILABLE_AI_AGENT_KEYS=()
   VER_GIT=""
   VER_NODE=""
+  VER_PYTHON=""
+  PYTHON_BIN=""
+  GRAPHIFY_PATH=""
 
   if declare -F detect_runtime_paths >/dev/null 2>&1; then
     detect_runtime_paths
@@ -315,6 +331,11 @@ detect_installed() {
 
   # Skills for selected AI agent only
   detect_selected_agent_skills
+
+  # Optional Graphify integration
+  if $WITH_GRAPHIFY; then
+    detect_graphify
+  fi
 }
 
 print_detection_results() {
@@ -361,6 +382,22 @@ print_detection_results() {
     printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}optional, for versioning${RESET}\n" "Git"
   fi
 
+  if $WITH_GRAPHIFY; then
+    if $HAS_GRAPHIFY_PYTHON; then
+      printf "  ${GREEN}✓${RESET}  %-20s ${DIM}%s (%s)${RESET}\n" "Python" "$VER_PYTHON" "$PYTHON_BIN"
+    elif $HAS_PYTHON; then
+      printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}%s detected; Python 3.10+ required${RESET}\n" "Python" "$VER_PYTHON"
+    else
+      printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}required by Graphify (3.10+)${RESET}\n" "Python"
+    fi
+
+    if $HAS_GRAPHIFY; then
+      printf "  ${GREEN}✓${RESET}  %-20s ${DIM}%s${RESET}\n" "Graphify" "$GRAPHIFY_PATH"
+    else
+      printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}optional map layer (package: graphifyy)${RESET}\n" "Graphify"
+    fi
+  fi
+
   # Obsidian Plugins (always installed per-wiki)
   printf "  ${GREEN}→${RESET}  %-20s ${DIM}auto-configured with wiki${RESET}\n" "Obsidian Plugins"
 
@@ -404,12 +441,22 @@ print_missing_items_details() {
     printf "    - Git: not detected\n"
     printf "      Action: install Git for repository workflows\n"
   fi
+  if $WITH_GRAPHIFY; then
+    if ! $HAS_GRAPHIFY_PYTHON; then
+      printf "    - Python 3.10+: not detected\n"
+      printf "      Action: install Python 3.10+ before Graphify\n"
+    elif ! $HAS_GRAPHIFY; then
+      printf "    - Graphify: not detected\n"
+      printf "      Action: install Python package graphifyy and register selected agent\n"
+    fi
+  fi
   printf "\n"
 }
 
 is_all_installed() {
   $HAS_OBSIDIAN && $HAS_NODE && $HAS_AI_AGENT && \
-  $HAS_OBSIDIAN_SKILLS && $HAS_VISUAL_SKILLS && $HAS_GIT
+  $HAS_OBSIDIAN_SKILLS && $HAS_VISUAL_SKILLS && $HAS_GIT && \
+  { ! $WITH_GRAPHIFY || $HAS_GRAPHIFY; }
 }
 
 print_manual_guide() {
@@ -453,6 +500,13 @@ print_manual_guide() {
 
   $HAS_GIT || \
     printf "  %-20s ${DIM}${UNDERLINE}https://git-scm.com${RESET}\n" "Git"
+
+  if $WITH_GRAPHIFY; then
+    $HAS_GRAPHIFY_PYTHON || \
+      printf "  %-20s ${DIM}${UNDERLINE}https://www.python.org/downloads/${RESET} ${DIM}(3.10+ required by Graphify)${RESET}\n" "Python"
+    $HAS_GRAPHIFY || \
+      printf "  %-20s ${GREEN}pip install graphifyy && graphify install${RESET}\n" "Graphify"
+  fi
 
   # Web Clipper (manual install only)
   printf "  %-20s ${DIM}${UNDERLINE}https://obsidian.md/clip${RESET} ${DIM}(save web pages to wiki)${RESET}\n" "Web Clipper"
@@ -1039,6 +1093,393 @@ install_skills() {
   fi
 }
 
+# ─── Graphify ────────────────────────────────────────────────────────────────
+
+_check_python_candidate() {
+  local cmd="$1"
+  shift || true
+  local out="" rc=0
+
+  out="$("$cmd" "$@" -c 'import sys; print(".".join(map(str, sys.version_info[:3]))); sys.exit(0 if sys.version_info >= (3, 10) else 42)' 2>/dev/null)" || rc=$?
+  if [[ "$rc" -eq 0 ]]; then
+    HAS_PYTHON=true
+    HAS_GRAPHIFY_PYTHON=true
+    PYTHON_BIN="$cmd${*:+ $*}"
+    VER_PYTHON="$out"
+    return 0
+  fi
+  if [[ "$rc" -eq 42 && -n "$out" && "$HAS_PYTHON" == "false" ]]; then
+    HAS_PYTHON=true
+    HAS_GRAPHIFY_PYTHON=false
+    PYTHON_BIN="$cmd${*:+ $*}"
+    VER_PYTHON="$out"
+  fi
+  return 1
+}
+
+detect_graphify() {
+  HAS_PYTHON=false
+  HAS_GRAPHIFY_PYTHON=false
+  HAS_GRAPHIFY=false
+  PYTHON_BIN=""
+  VER_PYTHON=""
+  GRAPHIFY_PATH=""
+
+  if command -v python3 >/dev/null 2>&1; then
+    _check_python_candidate python3 || true
+  fi
+  if ! $HAS_GRAPHIFY_PYTHON && command -v python >/dev/null 2>&1; then
+    _check_python_candidate python || true
+  fi
+  if ! $HAS_GRAPHIFY_PYTHON && command -v py >/dev/null 2>&1; then
+    _check_python_candidate py -3 || true
+  fi
+
+  GRAPHIFY_PATH="$(command -v graphify 2>/dev/null || true)"
+  if [[ -n "$GRAPHIFY_PATH" ]]; then
+    HAS_GRAPHIFY=true
+  fi
+}
+
+run_detected_python() {
+  if [[ "$PYTHON_BIN" == "py -3" ]]; then
+    py -3 "$@"
+  elif [[ -n "$PYTHON_BIN" ]]; then
+    "$PYTHON_BIN" "$@"
+  else
+    return 1
+  fi
+}
+
+graphify_platform_for_selected_agent() {
+  case "${SELECTED_AI_AGENT_KEY:-}" in
+    claude) printf 'claude\n' ;;
+    codex) printf 'codex\n' ;;
+    gemini) printf 'gemini\n' ;;
+    *) printf '\n' ;;
+  esac
+}
+
+install_graphify_tool() {
+  $WITH_GRAPHIFY || return 0
+
+  detect_graphify
+  if ! $HAS_GRAPHIFY_PYTHON; then
+    if $HAS_PYTHON; then
+      print_manual_install "Python 3.10+" "https://www.python.org/downloads/" \
+        "Detected Python $VER_PYTHON; Graphify requires Python 3.10 or newer."
+    else
+      print_manual_install "Python 3.10+" "https://www.python.org/downloads/" \
+        "Install Python 3.10+, then run: pip install graphifyy && graphify install"
+    fi
+    return 1
+  fi
+
+  if ! $HAS_GRAPHIFY; then
+    info "Installing ${GREEN}Graphify${RESET}..."
+    local installed=false
+
+    if command -v uv >/dev/null 2>&1; then
+      if uv tool install graphifyy 2>&1 | tail -5; then
+        installed=true
+      fi
+    fi
+    if ! $installed && command -v pipx >/dev/null 2>&1; then
+      if pipx install graphifyy 2>&1 | tail -5; then
+        installed=true
+      fi
+    fi
+    if ! $installed; then
+      if run_detected_python -m pip install --user graphifyy 2>&1 | tail -5; then
+        installed=true
+      fi
+    fi
+
+    detect_graphify
+    if ! $installed || ! $HAS_GRAPHIFY; then
+      print_manual_install "Graphify" "https://github.com/safishamsi/graphify/" \
+        "Run manually after Python 3.10+ is available: pip install graphifyy && graphify install"
+      return 1
+    fi
+    success "Graphify installed"
+  fi
+
+  register_graphify_for_selected_agent || true
+}
+
+register_graphify_for_selected_agent() {
+  $WITH_GRAPHIFY || return 0
+  $HAS_GRAPHIFY || return 1
+  $GRAPHIFY_REGISTERED && return 0
+
+  local platform=""
+  platform="$(graphify_platform_for_selected_agent)"
+  if [[ -z "$platform" ]]; then
+    warn "Graphify installed, but no supported selected agent is available for skill registration"
+    return 1
+  fi
+
+  info "Registering ${GREEN}Graphify${RESET} for ${GREEN}${SELECTED_AI_AGENT_NAME:-$platform}${RESET}..."
+  case "$platform" in
+    claude)
+      if graphify install 2>&1 | tail -5; then
+        GRAPHIFY_REGISTERED=true
+        success "Graphify registered for Claude Code"
+      else
+        print_manual_install "Graphify skill" "https://github.com/safishamsi/graphify/" \
+          "Run manually: graphify install"
+        return 1
+      fi
+      ;;
+    codex|gemini)
+      if graphify install --platform "$platform" 2>&1 | tail -5; then
+        GRAPHIFY_REGISTERED=true
+        success "Graphify registered for ${SELECTED_AI_AGENT_NAME:-$platform}"
+      else
+        print_manual_install "Graphify skill" "https://github.com/safishamsi/graphify/" \
+          "Run manually: graphify install --platform $platform"
+        return 1
+      fi
+      ;;
+  esac
+}
+
+graphifyignore_block() {
+  cat <<'EOF'
+# llm-wiki-builder:graphify:start
+# Graphify reads the project source tree and writes its map to graphify-out/.
+llm-wiki/
+graphify-out/
+.git/
+.obsidian/
+node_modules/
+vendor/
+dist/
+build/
+.next/
+target/
+.env*
+*.env
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.exe
+*.dll
+*.so
+*.dylib
+# llm-wiki-builder:graphify:end
+EOF
+}
+
+replace_marker_block() {
+  local target_file="$1" block_file="$2" start="$3" end="$4" tmp
+  tmp="$(mktemp)"
+  awk -v start="$start" \
+      -v end="$end" \
+      -v block_file="$block_file" '
+    BEGIN {
+      while ((getline line < block_file) > 0) {
+        block = block line ORS
+      }
+      in_block = 0
+      replaced = 0
+    }
+    $0 == start {
+      printf "%s", block
+      in_block = 1
+      replaced = 1
+      next
+    }
+    $0 == end {
+      in_block = 0
+      next
+    }
+    !in_block { print }
+    END {
+      if (!replaced) {
+        if (NR > 0) print ""
+        printf "%s", block
+      }
+    }
+  ' "$target_file" > "$tmp" && mv "$tmp" "$target_file"
+}
+
+ensure_graphifyignore() {
+  $WITH_GRAPHIFY || return 0
+  local project_root="$1" target="$project_root/.graphifyignore" block_file
+  block_file="$(mktemp)"
+  graphifyignore_block > "$block_file"
+
+  if [[ -f "$target" ]]; then
+    replace_marker_block "$target" "$block_file" \
+      "# llm-wiki-builder:graphify:start" \
+      "# llm-wiki-builder:graphify:end"
+  else
+    cp "$block_file" "$target"
+  fi
+
+  rm -f "$block_file"
+  success "Graphify ignore rules ready: ${CYAN}$(rel_path "$target")${RESET}"
+}
+
+codex_multi_agent_enabled() {
+  local config="$1"
+  [[ -f "$config" ]] || return 1
+  awk '
+    /^\[[^]]+\]/ { in_features = ($0 == "[features]") }
+    in_features && /^[[:space:]]*multi_agent[[:space:]]*=[[:space:]]*true([[:space:]]*(#.*)?)?$/ { found = 1 }
+    END { exit found ? 0 : 1 }
+  ' "$config"
+}
+
+enable_codex_multi_agent() {
+  local config="$1" tmp ts
+  mkdir -p "$(dirname "$config")"
+  if [[ ! -f "$config" ]]; then
+    cat > "$config" <<'EOF'
+[features]
+multi_agent = true
+EOF
+    success "Enabled Codex multi_agent in: $config"
+    return 0
+  fi
+
+  ts="$(date +%Y%m%d%H%M%S)"
+  cp "$config" "$config.bak.$ts"
+  tmp="$(mktemp)"
+  awk '
+    BEGIN { in_features = 0; saw_features = 0; wrote = 0 }
+    /^\[[^]]+\]/ {
+      if (in_features && !wrote) {
+        print "multi_agent = true"
+        wrote = 1
+      }
+      in_features = ($0 == "[features]")
+      if (in_features) saw_features = 1
+      print
+      next
+    }
+    in_features && /^[[:space:]]*multi_agent[[:space:]]*=/ {
+      if (!wrote) {
+        print "multi_agent = true"
+        wrote = 1
+      }
+      next
+    }
+    { print }
+    END {
+      if (in_features && !wrote) {
+        print "multi_agent = true"
+        wrote = 1
+      }
+      if (!saw_features) {
+        print ""
+        print "[features]"
+        print "multi_agent = true"
+      }
+    }
+  ' "$config" > "$tmp" && mv "$tmp" "$config"
+  success "Enabled Codex multi_agent in: $config"
+  printf "  ${DIM}Backup: %s.bak.%s${RESET}\n" "$config" "$ts"
+}
+
+configure_codex_multi_agent_for_graphify() {
+  $WITH_GRAPHIFY || return 0
+  [[ "${SELECTED_AI_AGENT_KEY:-}" == "codex" ]] || return 0
+
+  local config="$HOME/.codex/config.toml"
+  if codex_multi_agent_enabled "$config"; then
+    success "Codex multi_agent already enabled"
+    return 0
+  fi
+
+  if $NON_INTERACTIVE; then
+    warn "Codex Graphify extraction needs multi_agent enabled. Add this to ~/.codex/config.toml:"
+    printf "  ${CYAN}[features]${RESET}\n"
+    printf "  ${CYAN}multi_agent = true${RESET}\n"
+    return 0
+  fi
+
+  if prompt_confirm "Enable Codex multi_agent for Graphify? (backs up config first)" "Y"; then
+    enable_codex_multi_agent "$config" || true
+  else
+    warn "Skipped Codex multi_agent update; Graphify may not run parallel extraction in Codex"
+  fi
+}
+
+graphify_agent_command_hint() {
+  local update_flag="$1"
+  case "${SELECTED_AI_AGENT_KEY:-}" in
+    codex) printf '$graphify .%s\n' "$update_flag" ;;
+    *) printf '/graphify .%s\n' "$update_flag" ;;
+  esac
+}
+
+maybe_run_graphify_build() {
+  $WITH_GRAPHIFY || return 0
+  $HAS_GRAPHIFY || return 0
+  [[ -n "${PROJECT_ROOT:-}" ]] || return 0
+  [[ "$ONLY_TOOLS" == "true" ]] && return 0
+
+  local update_flag="" shell_flag="" hint=""
+  if [[ -f "$PROJECT_ROOT/graphify-out/graph.json" ]]; then
+    update_flag=" --update"
+    shell_flag="--update"
+  fi
+  hint="$(graphify_agent_command_hint "$update_flag")"
+
+  if $NON_INTERACTIVE; then
+    printf "  ${DIM}Graphify ready. To build/update the map later, run in your AI agent: %s${RESET}\n" "$hint"
+    return 0
+  fi
+
+  warn "Graphify may consume model/API credits when extracting docs, PDFs, images, audio, or video."
+  if prompt_confirm "Run Graphify now? Suggested agent command: $hint" "N"; then
+    info "Running Graphify map build..."
+    if [[ -n "$shell_flag" ]]; then
+      if (cd "$PROJECT_ROOT" && graphify . "$shell_flag"); then
+        success "Graphify map ready: ${CYAN}$(rel_path "$PROJECT_ROOT/graphify-out")${RESET}"
+      else
+        warn "Graphify build failed. You can retry later with: $hint"
+      fi
+    else
+      if (cd "$PROJECT_ROOT" && graphify .); then
+        success "Graphify map ready: ${CYAN}$(rel_path "$PROJECT_ROOT/graphify-out")${RESET}"
+      else
+        warn "Graphify build failed. You can retry later with: $hint"
+      fi
+    fi
+  else
+    printf "  ${DIM}Skipped Graphify build. Run later in your AI agent: %s${RESET}\n" "$hint"
+  fi
+}
+
+setup_graphify_integration() {
+  $WITH_GRAPHIFY || return 0
+  [[ -n "${PROJECT_ROOT:-}" ]] || resolve_project_context
+
+  detect_graphify
+  if ! $SKIP_INSTALL; then
+    install_graphify_tool || true
+  elif ! $HAS_GRAPHIFY; then
+    print_manual_install "Graphify" "https://github.com/safishamsi/graphify/" \
+      "Skipped install by --skip-install. Run manually: pip install graphifyy && graphify install"
+  fi
+
+  detect_graphify
+  configure_codex_multi_agent_for_graphify
+  ensure_graphifyignore "$PROJECT_ROOT"
+  maybe_run_graphify_build
+}
+
 # ─── Run All Installs ────────────────────────────────────────────────────────
 
 run_install() {
@@ -1051,9 +1492,10 @@ run_install() {
   install_obsidian    || true
   install_skills      || true
   install_git         || true
+  install_graphify_tool || true
 
   # Final check — report what's still missing
-  if ! $HAS_OBSIDIAN || ! $HAS_NODE || ! $HAS_AI_AGENT || ! $HAS_GIT; then
+  if ! $HAS_OBSIDIAN || ! $HAS_NODE || ! $HAS_AI_AGENT || ! $HAS_GIT || { $WITH_GRAPHIFY && ! $HAS_GRAPHIFY; }; then
     warn "\nSome tools could not be auto-installed. Check the manual install guides above."
   fi
 }
@@ -1142,6 +1584,18 @@ render_agents_managed_block() {
 - 除非用户明确要求，不修改项目源码、原始文档或配置文件。
 - 摘要放入 \`llm-wiki/资料摘要/\`，概念页放入 \`llm-wiki/概念/\`，综合分析放入 \`llm-wiki/综合分析/\`，图表资源放入 \`llm-wiki/assets/\` 或 \`llm-wiki/canvas/\`。
 - 每次分析后更新 \`llm-wiki/Wiki 目录.md\` 和 \`llm-wiki/操作日志.md\`。
+EOF
+    if $WITH_GRAPHIFY; then
+      cat <<'EOF'
+
+### Graphify 地图层
+- 如存在 `graphify-out/GRAPH_REPORT.md`，回答架构、依赖、模块关系、跨文件连接等问题前，先读取该报告作为项目地图。
+- 必要时使用 `graphify-out/graph.json` 或 Graphify 查询命令辅助定位，再回到源文件验证关键结论。
+- `graphify-out/` 是结构地图层；`llm-wiki/` 是长期知识库层。不要把 Graphify `--wiki` 生成内容自动合并进 `llm-wiki/`。
+- 可复用、经验证的解释仍写入 `llm-wiki/资料摘要/`、`llm-wiki/概念/` 或 `llm-wiki/综合分析/`，并更新目录与操作日志。
+EOF
+    fi
+    cat <<EOF
 
 ### 项目名称
 - Wiki 名称：${name}
@@ -1163,6 +1617,18 @@ This project uses \`llm-wiki/\` as an embedded LLM Wiki. The current project roo
 - Do not modify source code, original docs, or project configuration unless the user explicitly asks.
 - Put source summaries in \`llm-wiki/summaries/\`, concept pages in \`llm-wiki/concepts/\`, synthesis in \`llm-wiki/synthesis/\`, and visual assets in \`llm-wiki/assets/\` or \`llm-wiki/canvas/\`.
 - After each analysis, update \`llm-wiki/Index.md\` and \`llm-wiki/Changelog.md\`.
+EOF
+    if $WITH_GRAPHIFY; then
+      cat <<'EOF'
+
+### Graphify Map Layer
+- When `graphify-out/GRAPH_REPORT.md` exists, read it first for architecture, dependency, module relationship, and cross-file connection questions.
+- Use `graphify-out/graph.json` or Graphify query commands when useful, then verify important conclusions against source files.
+- `graphify-out/` is the structural map layer; `llm-wiki/` is the durable knowledge layer. Do not automatically merge Graphify `--wiki` output into `llm-wiki/`.
+- Store reusable, verified explanations in `llm-wiki/summaries/`, `llm-wiki/concepts/`, or `llm-wiki/synthesis/`, then update the index and changelog.
+EOF
+    fi
+    cat <<EOF
 
 ### Project Name
 - Wiki name: ${name}
@@ -1232,7 +1698,7 @@ ensure_project_agents() {
   local project_root="$1" name="$2"
   local agents_file="$project_root/AGENTS.md"
   local sidecar_file="$project_root/AGENTS.llm-wiki.md"
-  local block_file action ts has_start=false has_end=false has_block=false
+  local block_file action ts has_start=false has_end=false has_block=false previous_graphify=false original_with_graphify="$WITH_GRAPHIFY"
 
   name="$(normalize_wiki_name "$name")"
   if [[ -z "$name" ]]; then
@@ -1241,15 +1707,23 @@ ensure_project_agents() {
   fi
   [[ -n "$name" ]] || name="llm-wiki"
 
-  block_file="$(mktemp)"
-  render_agents_managed_block "$name" > "$block_file"
-
   if [[ ! -f "$agents_file" ]]; then
+    block_file="$(mktemp)"
+    render_agents_managed_block "$name" > "$block_file"
     cp "$block_file" "$agents_file"
     rm -f "$block_file"
     success "Created AGENTS.md with llm-wiki rules"
     return 0
   fi
+
+  grep -Fq "graphify-out/GRAPH_REPORT.md" "$agents_file" && previous_graphify=true
+  if ! $WITH_GRAPHIFY && $previous_graphify; then
+    WITH_GRAPHIFY=true
+  fi
+
+  block_file="$(mktemp)"
+  render_agents_managed_block "$name" > "$block_file"
+  WITH_GRAPHIFY="$original_with_graphify"
 
   grep -Fq "<!-- llm-wiki-builder:start -->" "$agents_file" && has_start=true
   grep -Fq "<!-- llm-wiki-builder:end -->" "$agents_file" && has_end=true
@@ -1761,6 +2235,13 @@ print_success() {
   printf "             ${DIM}Ask questions, get answers with llm-wiki citations${RESET}\n"
   printf "  ${MAGENTA}${BOLD}3. Lint${RESET}    ${DIM}→${RESET}  ${BLUE}Run a health check on llm-wiki${RESET}\n"
   printf "             ${DIM}Find orphans, stale pages, and missing concepts${RESET}\n"
+  if $WITH_GRAPHIFY; then
+    local graphify_update="" graphify_hint=""
+    [[ -f "$abs_project/graphify-out/graph.json" ]] && graphify_update=" --update"
+    graphify_hint="$(graphify_agent_command_hint "$graphify_update" 2>/dev/null || true)"
+    printf "  ${MAGENTA}${BOLD}4. Map${RESET}     ${DIM}→${RESET}  ${BLUE}%s${RESET}\n" "${graphify_hint:-/graphify .}"
+    printf "             ${DIM}Build/update graphify-out as the project map layer${RESET}\n"
+  fi
 
   printf "\n${BOLD}Quick start:${RESET}\n\n"
   local step_n=1
@@ -1800,9 +2281,11 @@ parse_args() {
         shift 2
         ;;
       --skip-install)    SKIP_INSTALL=true; shift ;;
+      --yes|-y)          NON_INTERACTIVE=true; shift ;;
       --only-tools)      ONLY_TOOLS=true; shift ;;
       --only-obsidian)   ONLY_OBSIDIAN=true; shift ;;
       --only-wiki)       ONLY_WIKI=true; shift ;;
+      --with-graphify)   WITH_GRAPHIFY=true; shift ;;
       --help|-h)         usage; exit 0 ;;
       --version|-v)      echo "llm-wiki-builder v$VERSION"; exit 0 ;;
       *)                 fail "Unknown option: $1" ;;
@@ -1816,6 +2299,9 @@ parse_args() {
   $ONLY_WIKI && mode_count=$((mode_count + 1))
   if [[ $mode_count -gt 1 ]]; then
     fail "Cannot use multiple mode flags together (--only-tools, --only-obsidian, --only-wiki)"
+  fi
+  if $ONLY_OBSIDIAN && $WITH_GRAPHIFY; then
+    fail "Cannot use --with-graphify with --only-obsidian"
   fi
 }
 
@@ -1844,6 +2330,8 @@ Options:
   --dir <directory>    Project directory (default: current directory)
   --lang <zh|en>       Wiki language (default: en)
   --skip-install       Skip tool installation in default mode
+  --with-graphify      Install/register Graphify and add project graph rules
+  --yes, -y            Non-interactive mode; use defaults and never edit global config without an explicit prompt
   --help               Show this help
   --version            Show version
 
@@ -1862,6 +2350,9 @@ Examples:
 
   # Only initialize embedded wiki (tools already installed)
   bash install.sh --only-wiki --dir ~/code/my-project --name my-project-wiki
+
+  # Initialize wiki and configure Graphify as the project map layer
+  bash install.sh --with-graphify
 
 Configuration Merge (--only-obsidian):
   When target has existing Obsidian config, new settings are merged:
@@ -1998,10 +2489,18 @@ main() {
 
   if $ONLY_WIKI; then
     info "Mode: ${GREEN}--only-wiki${RESET} (initialize embedded llm-wiki only)"
-    stepn "1" "2" "Initializing llm-wiki"
+    local only_wiki_steps=2
+    $WITH_GRAPHIFY && only_wiki_steps=3
+    stepn "1" "$only_wiki_steps" "Initializing llm-wiki"
     setup_wiki
 
-    stepn "2" "2" "Finalizing"
+    if $WITH_GRAPHIFY; then
+      stepn "2" "$only_wiki_steps" "Configuring Graphify"
+      detect_installed
+      setup_graphify_integration
+    fi
+
+    stepn "$only_wiki_steps" "$only_wiki_steps" "Finalizing"
     cleanup_installer
     print_success "$WIKI_NAME" "$WIKI_TARGET"
     return 0
@@ -2016,9 +2515,10 @@ main() {
   local need_install=false
   local current_step=1
 
+  $WITH_GRAPHIFY && total_steps=$((total_steps + 1))
   if ! $SKIP_INSTALL && ! is_all_installed; then
     need_install=true
-    total_steps=5
+    total_steps=$((total_steps + 1))
   fi
 
   stepn "$current_step" "$total_steps" "Detecting installed tools"
@@ -2047,6 +2547,12 @@ main() {
   stepn "$current_step" "$total_steps" "Configuring Obsidian"
   configure_obsidian_project "$PROJECT_ROOT"
   current_step=$((current_step + 1))
+
+  if $WITH_GRAPHIFY; then
+    stepn "$current_step" "$total_steps" "Configuring Graphify"
+    setup_graphify_integration
+    current_step=$((current_step + 1))
+  fi
 
   stepn "$current_step" "$total_steps" "Finalizing"
   cleanup_installer

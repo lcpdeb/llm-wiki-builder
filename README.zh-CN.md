@@ -34,6 +34,9 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 
 # 跳过全局工具套件检测和 llm-wiki 初始化，仅在当前项目配置 Obsidian 插件、快捷键等配置
 curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash -s -- --only-obsidian
+
+# 初始化 llm-wiki，并把 Graphify 作为可选项目地图层接入
+curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash -s -- --with-graphify
 ```
 
 ### 方式 B — Skill 安装（面向 AI Agent 用户，或有系统、环境兼容问题时）
@@ -87,6 +90,8 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 | `--only-tools` | 仅安装工具套件，不创建 wiki 知识库 | - |
 | `--only-wiki` | 仅在项目中初始化 `llm-wiki` 和 `AGENTS.md`，不安装工具 | - |
 | `--only-obsidian` | 仅在项目根目录配置 Obsidian | - |
+| `--with-graphify` | 安装/注册 Graphify，生成 `.graphifyignore`，并让 Agent 把 `graphify-out/` 作为项目地图层使用 | - |
+| `--yes` / `-y` | 非交互模式，使用默认值，并避免修改全局配置的交互提示 | - |
 | `--bash` | 通过 `/llm-wiki-builder --bash` 命令使用（提供更灵活的 Agent 使用方式） | - |
 
 ### 检测安装
@@ -141,6 +146,16 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 
 - **[Obsidian Web Clipper](https://chromewebstore.google.com/detail/obsidian-web-clipper/cnjifjpddelmedmihgijeibhnjfabmlf)** — 将网页文章剪藏到项目中，再让 Agent 汇总到 `llm-wiki/`
 
+**Graphify（可选地图层）**
+
+当你希望在长期 wiki 之外增加一层结构化项目地图时，可以使用 `--with-graphify`。Graphify 输出保留在 `graphify-out/`（`GRAPH_REPORT.md`、`graph.json`、`graph.html`），`llm-wiki-builder` 继续把 `llm-wiki/` 作为长期 Markdown 知识库。
+
+- 需要 Python 3.10+；当前 PyPI 包名是 `graphifyy`，CLI 仍是 `graphify`。
+- 安装器会按当前选中的 AI Agent 注册 Graphify：Claude Code、Codex 或 Gemini。
+- 如果选中 Codex，安装器会先询问，再修改 `~/.codex/config.toml` 中的 `multi_agent = true`，并在修改前备份。
+- 安装器会在首次建图前询问，因为处理文档、PDF、图片、音频、视频等可能消耗模型/API额度。
+- Graphify 的 `--wiki` 输出不会自动合并进 `llm-wiki/`。
+
 ## 开始使用
 
 ```bash
@@ -156,6 +171,7 @@ claude
 - **分析** → `分析这个仓库并更新 llm-wiki`
 - **查询** → `X 和 Y 之间有什么关系？`
 - **巡检** → `运行一次 llm-wiki 巡检`
+- **地图**（启用 `--with-graphify` 时）→ `/graphify .`，Codex 中使用 `$graphify .`
 
 ## 知识库结构
 
@@ -169,6 +185,7 @@ project/
 │   ├── assets/excalidraw/   # 图表
 │   ├── canvas/              # JSON Canvas 可视化地图
 │   └── templates/           # 页面模板
+├── graphify-out/            # 可选 Graphify 地图输出
 ├── .obsidian/               # 当前项目的 Obsidian 配置和插件
 ├── AGENTS.md                # 带 llm-wiki 受管理区块的 Agent 规则
 └── <项目源码和文档>           # Agent 读取的源材料

@@ -14,6 +14,15 @@
 
 忽略 `llm-wiki/`、`.git/`、`.obsidian/`、`node_modules/`、`vendor/`、`dist/`、`build/`、`.next/`、`target/`、缓存目录、二进制文件、压缩包，以及 `.env*` 等密钥文件。
 
+## Graphify 地图层（可选）
+
+当项目启用 Graphify 时，`graphify-out/` 是结构地图层，`llm-wiki/` 是长期知识库层。
+
+- 如存在 `graphify-out/GRAPH_REPORT.md`，回答架构、依赖、模块关系、跨文件连接等问题前，先读取该报告。
+- 必要时使用 `graphify-out/graph.json` 或 Graphify 查询命令辅助定位，再回到源文件验证关键结论。
+- 不要把 Graphify `--wiki` 生成内容自动合并进 `llm-wiki/`。
+- 可复用、经验证的解释仍写入 `llm-wiki/资料摘要/`、`llm-wiki/概念/` 或 `llm-wiki/综合分析/`。
+
 ## 目录结构
 
 ```text

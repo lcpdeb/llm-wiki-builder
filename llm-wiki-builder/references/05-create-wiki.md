@@ -89,6 +89,7 @@ The managed block must say:
 - Output goes under `llm-wiki/`.
 - Exclude `llm-wiki/`, `.git/`, `.obsidian/`, dependencies, build outputs, binaries, and secrets.
 - Do not modify project source unless explicitly asked.
+- If `--with-graphify` is enabled, `graphify-out/` is the project map layer and `llm-wiki/` remains the durable wiki layer. Agents should read `graphify-out/GRAPH_REPORT.md` first for architecture and relationship questions, then write verified durable conclusions under `llm-wiki/`.
 
 ## Verify
 
@@ -99,4 +100,5 @@ After this stage:
 - `llm-wiki/wiki/` does not exist.
 - `raw/` was not created.
 - Re-running does not duplicate the managed block.
+- With Graphify enabled, `.graphifyignore` exists and Graphify rules are present in the managed block.
 

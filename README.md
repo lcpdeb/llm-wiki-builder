@@ -34,6 +34,9 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 
 # Skip tools and llm-wiki initialization, only configure Obsidian (plugins, shortcuts) in current project
 curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash -s -- --only-obsidian
+
+# Initialize llm-wiki and add Graphify as an optional project map layer
+curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash -s -- --with-graphify
 ```
 
 ### Option B — Skill install (for AI Agent users, or when bash has environment issues)
@@ -87,6 +90,8 @@ Supported options (use as needed):
 | `--only-tools` | Install tools only, without creating wiki | - |
 | `--only-wiki` | Initialize `llm-wiki` and `AGENTS.md` in the project, without installing tools | - |
 | `--only-obsidian` | Configure Obsidian in the project root only | - |
+| `--with-graphify` | Install/register Graphify, add `.graphifyignore`, and teach the agent to use `graphify-out/` as the project map layer | - |
+| `--yes` / `-y` | Non-interactive mode; use defaults and avoid global config prompts | - |
 | `--bash` | Used via `/llm-wiki-builder --bash` (gives Agent users a more flexible, token-saving path) | - |
 
 ### What Gets Installed
@@ -141,6 +146,16 @@ Detects what's already on your system and only installs what's missing.
 
 - **[Obsidian Web Clipper](https://chromewebstore.google.com/detail/obsidian-web-clipper/cnjifjpddelmedmihgijeibhnjfabmlf)** — Clip web articles into the project and ask the agent to summarize them into `llm-wiki/`
 
+**Graphify (optional map layer)**
+
+Use `--with-graphify` when you want a structural project map alongside the durable wiki. Graphify writes to `graphify-out/` (`GRAPH_REPORT.md`, `graph.json`, `graph.html`) and `llm-wiki-builder` keeps `llm-wiki/` as the long-term Markdown knowledge layer.
+
+- Requires Python 3.10+; the PyPI package is currently `graphifyy`, while the CLI remains `graphify`.
+- The installer registers Graphify for the selected AI agent: Claude Code, Codex, or Gemini.
+- For Codex, the installer asks before enabling `multi_agent = true` in `~/.codex/config.toml` and backs up the file first.
+- The installer asks before the first graph build because docs, PDFs, images, audio, and video extraction may consume model/API credits.
+- Graphify `--wiki` output is not automatically merged into `llm-wiki/`.
+
 ## Getting Started
 
 ```bash
@@ -156,6 +171,7 @@ Then chat with the AI:
 - **Analyze** → `Analyze this repository and update llm-wiki`
 - **Query** → `What is the relationship between X and Y?`
 - **Lint** → `Run a health check on llm-wiki`
+- **Map** (when `--with-graphify` is enabled) → `/graphify .` or `$graphify .` in Codex
 
 ## Wiki Structure
 
@@ -169,6 +185,7 @@ project/
 │   ├── assets/excalidraw/   # Diagrams
 │   ├── canvas/              # JSON Canvas visual maps
 │   └── templates/           # Page templates
+├── graphify-out/            # Optional Graphify map output
 ├── .obsidian/               # Obsidian config and plugins for the project
 ├── AGENTS.md                # Project agent rules with llm-wiki managed block
 └── <project source files>   # Source material analyzed by the agent
