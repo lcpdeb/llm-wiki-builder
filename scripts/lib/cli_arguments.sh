@@ -13,14 +13,13 @@ parse_args() {
         esac
         shift 2
         ;;
-      --non-interactive|--yes|-y) NON_INTERACTIVE=true; shift ;;
       --skip-install)    SKIP_INSTALL=true; shift ;;
       --only-tools)      ONLY_TOOLS=true; shift ;;
       --only-obsidian)   ONLY_OBSIDIAN=true; shift ;;
       --only-wiki)       ONLY_WIKI=true; shift ;;
       --help|-h)         usage; exit 0 ;;
       --version|-v)      echo "llm-wiki-builder v$VERSION"; exit 0 ;;
-      *)                 warn "Unknown option: $1"; shift ;;
+      *)                 fail "Unknown option: $1" ;;
     esac
   done
 
@@ -57,7 +56,6 @@ Options:
   --name <name>        Wiki display name (default: project directory name)
   --dir <directory>    Project directory (default: current directory)
   --lang <zh|en>       Wiki language (default: en)
-  --yes, -y            Skip all prompts, use defaults (non-interactive mode)
   --skip-install       Skip tool installation in default mode
   --help               Show this help
   --version            Show version
@@ -67,7 +65,6 @@ Environment:
 
 Examples:
   bash install.sh
-  bash install.sh --yes --name my-project-wiki
   bash install.sh --only-tools
   bash install.sh --only-obsidian --dir ~/code/my-project
   bash install.sh --only-wiki --dir ~/code/my-project --name my-project-wiki

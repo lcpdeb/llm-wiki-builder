@@ -12,9 +12,9 @@ description: |
 
 # llm-wiki-builder
 
-Guide the user through setting up an embedded LLM Wiki for a project: detect installed tools, install missing dependencies where possible, initialize `.llm-wiki/`, create or update `AGENTS.md`, and configure Obsidian for the project root.
+Guide the user through setting up an embedded LLM Wiki for a project: detect installed tools, choose a supported AI agent when multiple are present, install missing dependencies where possible, initialize `.llm-wiki/`, create or update `AGENTS.md`, and configure Obsidian for the project root.
 
-The user is already running an AI agent. Do not prompt them to install another AI agent just to use this skill.
+The user is already running an AI agent. Do not prompt them to install another AI agent just to use this skill. For installer checks, Claude Code, Codex, and Gemini are supported; if more than one is installed, default priority is Claude Code > Codex > Gemini.
 
 ## When To Use
 

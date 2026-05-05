@@ -48,6 +48,7 @@ load_lib_or_remote() {
 }
 
 # Core function set and progressive overrides.
+load_lib_or_remote "ai_agent_registry.sh"
 load_lib_or_remote "install_workflow.sh"
 load_lib_or_remote "runtime_path_registry.sh"
 load_lib_or_remote "environment_detection.sh"

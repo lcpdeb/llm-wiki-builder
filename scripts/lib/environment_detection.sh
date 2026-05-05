@@ -23,6 +23,10 @@ detect_os() {
       warn "No supported Linux package manager (apt/dnf/pacman) detected - tools will require manual install."
     fi
   elif [[ "$OS" == "windows" ]]; then
+    if [[ "${MSYS:-}" != *winsymlinks:* ]]; then
+      export MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict"
+      info "MSYS symlink mode: ${CYAN}winsymlinks:nativestrict${RESET}"
+    fi
     if command -v winget &>/dev/null; then PKG_MGR="winget"
     elif command -v choco &>/dev/null; then PKG_MGR="choco"
     elif command -v scoop &>/dev/null; then PKG_MGR="scoop"
@@ -36,6 +40,16 @@ detect_os() {
 }
 
 detect_installed() {
+  HAS_GIT=false
+  HAS_NODE=false
+  HAS_OBSIDIAN=false
+  HAS_AI_AGENT=false
+  HAS_OBSIDIAN_SKILLS=false
+  HAS_VISUAL_SKILLS=false
+  AVAILABLE_AI_AGENT_KEYS=()
+  VER_GIT=""
+  VER_NODE=""
+
   if declare -F detect_runtime_paths >/dev/null 2>&1; then
     detect_runtime_paths
   fi
@@ -52,7 +66,8 @@ detect_installed() {
     VER_NODE=$(node --version 2>/dev/null)
   fi
 
-  command -v claude &>/dev/null && HAS_CLAUDE_CODE=true
+  detect_ai_agents
+  select_ai_agent || true
 
   if [[ -n "${DETECTED_OBSIDIAN_PATH:-}" ]]; then
     HAS_OBSIDIAN=true
@@ -67,47 +82,54 @@ detect_installed() {
     fi
   fi
 
-  local agents_dir="$HOME/.agents/skills"
-  local skills_dir="$HOME/.claude/skills"
-  local plugins_dir="$HOME/.claude/plugins/marketplaces"
-
-  if [[ -d "$agents_dir/obsidian-markdown" || -d "$agents_dir/obsidian-cli" || -d "$skills_dir/obsidian-markdown" || -d "$skills_dir/obsidian-cli" ]]; then
-    HAS_OBSIDIAN_SKILLS=true
-  fi
-  if [[ -d "$agents_dir/excalidraw-diagram" || -d "$agents_dir/obsidian-canvas-creator" || -d "$skills_dir/excalidraw-diagram" || -d "$skills_dir/obsidian-canvas-creator" || -d "$plugins_dir/axton-obsidian-visual-skills/excalidraw-diagram" ]]; then
-    HAS_VISUAL_SKILLS=true
-  fi
+  detect_selected_agent_skills
 }
 
 print_detection_results() {
   printf "\n"
-  $HAS_CLAUDE_CODE && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}installed${RESET}\n" "Claude Code" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}recommended AI agent${RESET}\n" "Claude Code"
-  $HAS_NODE && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}%s${RESET}\n" "Node.js" "$VER_NODE" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}required for Claude Code${RESET}\n" "Node.js"
+  $HAS_AI_AGENT && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}installed: %s${RESET}\n" "AI Agent" "$SELECTED_AI_AGENT_NAME" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}recommended: %s${RESET}\n" "AI Agent" "$(agent_names_joined " / ")"
+  $HAS_NODE && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}%s${RESET}\n" "Node.js" "$VER_NODE" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}required for skills / agent CLIs${RESET}\n" "Node.js"
   $HAS_OBSIDIAN && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}installed${RESET}\n" "Obsidian" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}wiki editor${RESET}\n" "Obsidian"
-  $HAS_OBSIDIAN_SKILLS && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}installed${RESET}\n" "Obsidian Skills" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}kepano/obsidian-skills${RESET}\n" "Obsidian Skills"
-  $HAS_VISUAL_SKILLS && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}installed${RESET}\n" "Visual Skills" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}excalidraw / canvas / mermaid${RESET}\n" "Visual Skills"
+  $HAS_OBSIDIAN_SKILLS && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}%s${RESET}\n" "Obsidian Skills" "$(skills_status_text "OBSIDIAN")" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}%s${RESET}\n" "Obsidian Skills" "$(skills_status_text "OBSIDIAN")"
+  $HAS_VISUAL_SKILLS && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}%s${RESET}\n" "Visual Skills" "$(skills_status_text "VISUAL")" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}%s${RESET}\n" "Visual Skills" "$(skills_status_text "VISUAL")"
   $HAS_GIT && printf "  ${GREEN}✓${RESET}  %-20s ${DIM}%s${RESET}\n" "Git" "$VER_GIT" || printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}optional, for versioning${RESET}\n" "Git"
   printf "  ${GREEN}→${RESET}  %-20s ${DIM}auto-configured with wiki${RESET}\n" "Obsidian Plugins"
   printf "\n"
-  if declare -F print_detected_paths_summary >/dev/null 2>&1; then
-    print_detected_paths_summary
-  fi
 }
 
 is_all_installed() {
-  $HAS_OBSIDIAN && $HAS_NODE && $HAS_CLAUDE_CODE && $HAS_OBSIDIAN_SKILLS && $HAS_VISUAL_SKILLS && $HAS_GIT
+  $HAS_OBSIDIAN && $HAS_NODE && $HAS_AI_AGENT && $HAS_OBSIDIAN_SKILLS && $HAS_VISUAL_SKILLS && $HAS_GIT
 }
 
 print_manual_guide() {
   printf "\n  ${BOLD}Manual install guide:${RESET}\n\n"
   $HAS_OBSIDIAN || printf "  %-20s ${DIM}${UNDERLINE}https://obsidian.md${RESET}\n" "Obsidian"
   $HAS_NODE || printf "  %-20s ${DIM}${UNDERLINE}https://nodejs.org${RESET}\n" "Node.js"
-  if ! $HAS_CLAUDE_CODE; then
-    printf "  %-20s ${DIM}${UNDERLINE}https://claude.ai/claude-code${RESET}\n" "Claude Code"
-    printf "  %-20s ${GREEN}npm install -g @anthropic-ai/claude-code${RESET}\n" ""
+  if ! $HAS_AI_AGENT; then
+    local default_agent_key="" default_agent_url="" default_agent_cmd="" agent_names=""
+    default_agent_key="$(default_ai_agent_key 2>/dev/null || true)"
+    default_agent_url="$(agent_field "$default_agent_key" install_url 2>/dev/null || true)"
+    default_agent_cmd="$(agent_field "$default_agent_key" install_cmd 2>/dev/null || true)"
+    agent_names="$(agent_names_joined " / " 2>/dev/null || true)"
+    printf "  %-20s ${DIM}${UNDERLINE}%s${RESET} ${DIM}(default priority; %s supported)${RESET}\n" "AI Agent" "$default_agent_url" "$agent_names"
+    printf "  %-20s ${GREEN}%s${RESET}\n" "" "$default_agent_cmd"
   fi
   $HAS_OBSIDIAN_SKILLS || printf "  %-20s ${DIM}${UNDERLINE}https://github.com/kepano/obsidian-skills${RESET}\n" "Obsidian Skills"
+  if ! $HAS_OBSIDIAN_SKILLS && $HAS_AI_AGENT; then
+    local skills_root="" global_skills_root=""
+    skills_root="$(selected_skills_root_dir 2>/dev/null || true)"
+    global_skills_root="$(global_skills_root_dir 2>/dev/null || true)"
+    printf "  %-20s ${GREEN}npx skills add kepano/obsidian-skills -g -y${RESET}\n" ""
+    printf "  %-20s ${DIM}link %s/<skill> -> %s/<skill>${RESET}\n" "" "${global_skills_root:-~/.agents/skills}" "${skills_root:-<selected agent skills dir>}"
+  fi
   $HAS_VISUAL_SKILLS || printf "  %-20s ${DIM}${UNDERLINE}https://github.com/axtonliu/axton-obsidian-visual-skills${RESET}\n" "Visual Skills"
+  if ! $HAS_VISUAL_SKILLS && $HAS_AI_AGENT; then
+    local skills_root_v="" global_skills_root_v=""
+    skills_root_v="$(selected_skills_root_dir 2>/dev/null || true)"
+    global_skills_root_v="$(global_skills_root_dir 2>/dev/null || true)"
+    printf "  %-20s ${GREEN}npx skills add axtonliu/axton-obsidian-visual-skills -g -y${RESET}\n" ""
+    printf "  %-20s ${DIM}link %s/<skill> -> %s/<skill>${RESET}\n" "" "${global_skills_root_v:-~/.agents/skills}" "${skills_root_v:-<selected agent skills dir>}"
+  fi
   $HAS_GIT || printf "  %-20s ${DIM}${UNDERLINE}https://git-scm.com${RESET}\n" "Git"
   printf "  %-20s ${DIM}${UNDERLINE}https://obsidian.md/clip${RESET} ${DIM}(save web pages to wiki)${RESET}\n" "Web Clipper"
   printf "\n"

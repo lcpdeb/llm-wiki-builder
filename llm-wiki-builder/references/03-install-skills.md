@@ -1,63 +1,82 @@
 # Stage 2: Install Agent Skills
 
-Two packages to install. Both use the vercel-labs/skills CLI via `npx` (no global skills CLI install needed).
+Two packages are installed with the vercel-labs/skills CLI via `npx`; no global
+skills CLI install is needed.
 
-**Output rule**: report each package on its own line by name (`✓ kepano/obsidian-skills` / `✓ axtonliu/visual-skills`). Do not combine them into a single "Both Agent Skills are installed" line — global principle #9.
+The `skills` CLI global store is `$HOME/.agents/skills`. After each package is
+installed, link the managed skill directories from that global store into the
+currently selected agent skills directory (`~/.claude/skills`, `~/.codex/skills`,
+or `~/.gemini/skills`).
+
+Before running `npx`, check whether every managed skill for that package already
+exists in `$HOME/.agents/skills`. If the global store is already complete, skip
+the install command and only link the managed skills into the selected agent
+directory. If symlink creation fails, ask the user before any copy fallback.
 
 ## kepano/obsidian-skills
 
-**Install:**
+Install:
 
 ```bash
 npx -y skills add kepano/obsidian-skills -g -y
 ```
 
-**Detect before / verify after** (per `references/01-detect-tools.md` — `~/.agents/` preferred over `~/.claude/`):
+Managed skills:
+
+```text
+defuddle
+json-canvas
+obsidian-bases
+obsidian-cli
+obsidian-markdown
+```
+
+Detect before / verify after:
 
 ```bash
-for d in \
-  "$HOME/.agents/skills/obsidian-markdown" \
-  "$HOME/.agents/skills/obsidian-cli" \
-  "$HOME/.claude/skills/obsidian-markdown" \
-  "$HOME/.claude/skills/obsidian-cli"; do
-  [[ -d "$d" ]] && { echo "✓ kepano/obsidian-skills (found at $d)"; installed=true; break; }
+for s in defuddle json-canvas obsidian-bases obsidian-cli obsidian-markdown; do
+  [[ -L "$SELECTED_AGENT_SKILLS/$s" ]] || exit 1
 done
 ```
 
 ## axtonliu/axton-obsidian-visual-skills
 
-**Install:**
+Install:
 
 ```bash
 npx -y skills add axtonliu/axton-obsidian-visual-skills -g -y
 ```
 
-**Detect:**
+Managed skills:
+
+```text
+excalidraw-diagram
+mermaid-visualizer
+obsidian-canvas-creator
+```
+
+Detect before / verify after:
 
 ```bash
-for d in \
-  "$HOME/.agents/skills/excalidraw-diagram" \
-  "$HOME/.agents/skills/obsidian-canvas-creator" \
-  "$HOME/.claude/skills/excalidraw-diagram" \
-  "$HOME/.claude/skills/obsidian-canvas-creator" \
-  "$HOME/.claude/plugins/marketplaces/axton-obsidian-visual-skills/excalidraw-diagram"; do
-  [[ -d "$d" ]] && { echo "✓ axtonliu/visual-skills (found at $d)"; installed=true; break; }
+for s in excalidraw-diagram mermaid-visualizer obsidian-canvas-creator; do
+  [[ -L "$SELECTED_AGENT_SKILLS/$s" ]] || exit 1
 done
 ```
 
-## Canvas operations constraint (encoded in template, not surfaced to user here)
+## Canvas Operations Constraint
 
-`kepano/obsidian-skills` bundles 5 skills: `defuddle`, `json-canvas`, `obsidian-bases`, `obsidian-cli`, `obsidian-markdown`.
+`json-canvas` is installed, but the vault's `AGENTS.md` template instructs all
+`.canvas` creation to go through `obsidian-canvas-creator` from
+`axtonliu/visual-skills`. Do not delete `json-canvas`; `skills update` may pull
+it back. The constraint lives in `AGENTS.md`.
 
-`json-canvas` is installed but the vault's `AGENTS.md` (Stage 4 template) instructs all `.canvas` creation to go through `obsidian-canvas-creator` (from axtonliu/visual-skills). Do not delete the `json-canvas` directory — `skills update` may pull it back; the constraint lives in `AGENTS.md` instead.
+## Failure Handling
 
-Do NOT print this constraint to the user during Stage 2 or in the Stage 6 summary — it's AI-coordination internal to the resulting vault, not user-facing information (global principle #10).
+If either `npx` install fails due to network or registry issues:
 
-## Failure handling
-
-If either `npx` install fails (network, registry):
-
-- Record to manual-install list:
-  - `kepano/obsidian-skills: npx skills add kepano/obsidian-skills -g`
-  - `axtonliu/visual-skills: npx skills add axtonliu/axton-obsidian-visual-skills -g`
+- Record the package in the manual-install list.
+- Tell the user to run the matching `npx skills add ... -g -y` command.
+- Then link the relevant directories from `$HOME/.agents/skills` into the
+  selected agent skills directory as symlinks.
+- If symlink creation fails, ask the user before any copy fallback.
 - Continue to Stage 3; skills are not critical-path for creating the wiki.

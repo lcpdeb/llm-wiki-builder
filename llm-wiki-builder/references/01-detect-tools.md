@@ -11,9 +11,8 @@ Use `command -v <tool>` for CLI tools. Do not use `which` (not POSIX-portable on
 - `command -v claude` — Claude Code
 - `command -v codex` — Codex CLI
 - `command -v gemini` — Gemini CLI
-- `command -v opencode` — OpenCode
-- `command -v gh` — GitHub CLI (needed for Copilot CLI)
-- `gh extension list 2>/dev/null | grep -q gh-copilot` — Copilot CLI (extension, not binary)
+
+For the installer's AI Agent requirement, Claude Code, Codex, and Gemini are the supported checks. If multiple are found, choose interactively and use this default priority: Claude Code > Codex > Gemini. Do not treat Claude Code as missing when Codex or Gemini is already available.
 
 If a command is missing, its exit status is non-zero; use this in shell logic:
 
@@ -33,24 +32,29 @@ fi
 
 ## Agent Skills (kepano/obsidian-skills)
 
-**Priority order (highest first):** `~/.agents/` before `~/.claude/`.
+Detection is scoped to the currently selected AI agent. Do not count
+`$HOME/.agents/skills` as installed; it is only the global store used by the
+`skills` CLI before the installer links skills into the selected agent.
 
-Installed if ANY of these directories exists:
+Installed only when all managed Obsidian skills are present as symlinks under
+the selected agent skills directory (`~/.claude/skills`, `~/.codex/skills`, or
+`~/.gemini/skills`) and each symlink points to `$HOME/.agents/skills/<skill>`:
 
-1. `$HOME/.agents/skills/obsidian-markdown`
-2. `$HOME/.agents/skills/obsidian-cli`
-3. `$HOME/.claude/skills/obsidian-markdown`
-4. `$HOME/.claude/skills/obsidian-cli`
+1. `<selected-agent-skills>/defuddle`
+2. `<selected-agent-skills>/json-canvas`
+3. `<selected-agent-skills>/obsidian-bases`
+4. `<selected-agent-skills>/obsidian-cli`
+5. `<selected-agent-skills>/obsidian-markdown`
 
 ## Agent Skills (axtonliu/visual-skills)
 
-Installed if ANY of these exists:
+Installed only when all managed Visual skills are present as symlinks under the
+selected agent skills directory and each symlink points to
+`$HOME/.agents/skills/<skill>`:
 
-1. `$HOME/.agents/skills/excalidraw-diagram`
-2. `$HOME/.agents/skills/obsidian-canvas-creator`
-3. `$HOME/.claude/skills/excalidraw-diagram`
-4. `$HOME/.claude/skills/obsidian-canvas-creator`
-5. `$HOME/.claude/plugins/marketplaces/axton-obsidian-visual-skills/excalidraw-diagram`
+1. `<selected-agent-skills>/excalidraw-diagram`
+2. `<selected-agent-skills>/mermaid-visualizer`
+3. `<selected-agent-skills>/obsidian-canvas-creator`
 
 ## Web Clipper browser extension
 

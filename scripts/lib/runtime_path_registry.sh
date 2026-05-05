@@ -3,9 +3,6 @@
 # Detect local executable/app paths and persist once to .llm-wiki/detected-paths.json
 
 DETECTED_OBSIDIAN_PATH=""
-DETECTED_AGENT_CLAUDE_PATH=""
-DETECTED_AGENT_CODEX_PATH=""
-DETECTED_AGENT_GEMINI_PATH=""
 
 _first_existing_file() {
   local p
@@ -203,53 +200,39 @@ detect_obsidian_path_linux() {
 detect_agent_paths_windows() {
   local win_user="${USER:-${USERNAME:-}}"
   local appdata_posix=""
+  local key cmd p
 
   if [[ -n "${APPDATA:-}" ]]; then
     appdata_posix="$(_windows_to_posix_path "$APPDATA" 2>/dev/null || true)"
   fi
 
-  DETECTED_AGENT_CLAUDE_PATH="$(_resolve_cmd_path_windows claude || true)"
-  DETECTED_AGENT_CODEX_PATH="$(_resolve_cmd_path_windows codex || true)"
-  DETECTED_AGENT_GEMINI_PATH="$(_resolve_cmd_path_windows gemini || true)"
-
-  if [[ -z "$DETECTED_AGENT_CLAUDE_PATH" ]]; then
-    DETECTED_AGENT_CLAUDE_PATH="$(_first_existing_file \
-      "${win_user:+/c/Users/$win_user/AppData/Roaming/npm/claude}" \
-      "${win_user:+/c/Users/$win_user/AppData/Roaming/npm/claude.cmd}" \
-      "${win_user:+/c/Users/$win_user/AppData/Roaming/npm/claude.exe}" \
-      "${appdata_posix:+$appdata_posix/npm/claude}" \
-      "${appdata_posix:+$appdata_posix/npm/claude.cmd}" \
-      "${appdata_posix:+$appdata_posix/npm/claude.exe}" \
-    )" || true
-  fi
-
-  if [[ -z "$DETECTED_AGENT_CODEX_PATH" ]]; then
-    DETECTED_AGENT_CODEX_PATH="$(_first_existing_file \
-      "${win_user:+/c/Users/$win_user/AppData/Roaming/npm/codex}" \
-      "${win_user:+/c/Users/$win_user/AppData/Roaming/npm/codex.cmd}" \
-      "${win_user:+/c/Users/$win_user/AppData/Roaming/npm/codex.exe}" \
-      "${appdata_posix:+$appdata_posix/npm/codex}" \
-      "${appdata_posix:+$appdata_posix/npm/codex.cmd}" \
-      "${appdata_posix:+$appdata_posix/npm/codex.exe}" \
-    )" || true
-  fi
-
-  if [[ -z "$DETECTED_AGENT_GEMINI_PATH" ]]; then
-    DETECTED_AGENT_GEMINI_PATH="$(_first_existing_file \
-      "${win_user:+/c/Users/$win_user/AppData/Roaming/npm/gemini}" \
-      "${win_user:+/c/Users/$win_user/AppData/Roaming/npm/gemini.cmd}" \
-      "${win_user:+/c/Users/$win_user/AppData/Roaming/npm/gemini.exe}" \
-      "${appdata_posix:+$appdata_posix/npm/gemini}" \
-      "${appdata_posix:+$appdata_posix/npm/gemini.cmd}" \
-      "${appdata_posix:+$appdata_posix/npm/gemini.exe}" \
-    )" || true
-  fi
+  clear_detected_ai_agent_paths
+  for key in $(ai_agent_keys); do
+    cmd="$(agent_field "$key" command)"
+    p="$(_resolve_cmd_path_windows "$cmd" || true)"
+    if [[ -z "$p" ]]; then
+      p="$(_first_existing_file \
+        "${win_user:+/c/Users/$win_user/AppData/Roaming/npm/$cmd}" \
+        "${win_user:+/c/Users/$win_user/AppData/Roaming/npm/$cmd.cmd}" \
+        "${win_user:+/c/Users/$win_user/AppData/Roaming/npm/$cmd.exe}" \
+        "${appdata_posix:+$appdata_posix/npm/$cmd}" \
+        "${appdata_posix:+$appdata_posix/npm/$cmd.cmd}" \
+        "${appdata_posix:+$appdata_posix/npm/$cmd.exe}" \
+      )" || true
+    fi
+    set_agent_detected_path "$key" "$p"
+  done
 }
 
 detect_agent_paths_posix() {
-  DETECTED_AGENT_CLAUDE_PATH="$(_resolve_cmd_path claude || true)"
-  DETECTED_AGENT_CODEX_PATH="$(_resolve_cmd_path codex || true)"
-  DETECTED_AGENT_GEMINI_PATH="$(_resolve_cmd_path gemini || true)"
+  local key cmd p
+
+  clear_detected_ai_agent_paths
+  for key in $(ai_agent_keys); do
+    cmd="$(agent_field "$key" command)"
+    p="$(_resolve_cmd_path "$cmd" || true)"
+    set_agent_detected_path "$key" "$p"
+  done
 }
 
 detect_runtime_paths() {
@@ -268,9 +251,7 @@ detect_runtime_paths() {
       ;;
     *)
       DETECTED_OBSIDIAN_PATH=""
-      DETECTED_AGENT_CLAUDE_PATH=""
-      DETECTED_AGENT_CODEX_PATH=""
-      DETECTED_AGENT_GEMINI_PATH=""
+      clear_detected_ai_agent_paths
       ;;
   esac
 }
@@ -282,7 +263,9 @@ persist_detected_paths_once() {
   local root_gitignore="$repo_root/.gitignore"
   local ignore_entry="/.llm-wiki/detected-paths.json"
   local ts
-  local obsidian_path claude_path codex_path gemini_path
+  local obsidian_path
+  local selected_key selected_name selected_path
+  local key agent_key agent_path
 
   # Keep detected local paths out of VCS at project root scope.
   if [[ -f "$root_gitignore" ]]; then
@@ -296,36 +279,34 @@ persist_detected_paths_once() {
 
   ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%Y-%m-%dT%H:%M:%SZ")"
   obsidian_path="$(_json_escape "$DETECTED_OBSIDIAN_PATH")"
-  claude_path="$(_json_escape "$DETECTED_AGENT_CLAUDE_PATH")"
-  codex_path="$(_json_escape "$DETECTED_AGENT_CODEX_PATH")"
-  gemini_path="$(_json_escape "$DETECTED_AGENT_GEMINI_PATH")"
+  selected_key="$(_json_escape "${SELECTED_AI_AGENT_KEY:-}")"
+  selected_name="$(_json_escape "${SELECTED_AI_AGENT_NAME:-}")"
+  selected_path="$(_json_escape "${SELECTED_AI_AGENT_PATH:-}")"
 
-  cat > "$cfg_file" <<EOF
-{
-  "platform": "${OS:-unknown}",
-  "detected_at": "$ts",
-  "obsidian": {
-    "path": "${obsidian_path}"
-  },
-  "agents": {
-    "claude": {
-      "path": "${claude_path}"
-    },
-    "codex": {
-      "path": "${codex_path}"
-    },
-    "gemini": {
-      "path": "${gemini_path}"
-    }
-  }
-}
-EOF
-}
+  {
+    printf '{\n'
+    printf '  "platform": "%s",\n' "${OS:-unknown}"
+    printf '  "detected_at": "%s",\n' "$ts"
+    printf '  "obsidian": {\n'
+    printf '    "path": "%s"\n' "$obsidian_path"
+    printf '  },\n'
+    printf '  "agents": {\n'
+    printf '    "selected": {\n'
+    printf '      "key": "%s",\n' "$selected_key"
+    printf '      "name": "%s",\n' "$selected_name"
+    printf '      "path": "%s"\n' "$selected_path"
+    printf '    }'
 
-print_detected_paths_summary() {
-  declare -F info >/dev/null 2>&1 || return 0
-  info "Detected Obsidian path: ${CYAN}${DETECTED_OBSIDIAN_PATH:-<not found>}${RESET}"
-  info "Detected claude path: ${CYAN}${DETECTED_AGENT_CLAUDE_PATH:-<not found>}${RESET}"
-  info "Detected codex path: ${CYAN}${DETECTED_AGENT_CODEX_PATH:-<not found>}${RESET}"
-  info "Detected gemini path: ${CYAN}${DETECTED_AGENT_GEMINI_PATH:-<not found>}${RESET}"
+    for key in $(ai_agent_keys); do
+      agent_key="$(_json_escape "$key")"
+      agent_path="$(_json_escape "$(agent_detected_path "$key" 2>/dev/null || true)")"
+      printf ',\n'
+      printf '    "%s": {\n' "$agent_key"
+      printf '      "path": "%s"\n' "$agent_path"
+      printf '    }'
+    done
+    printf '\n'
+    printf '  }\n'
+    printf '}\n'
+  } > "$cfg_file"
 }

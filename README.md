@@ -6,7 +6,7 @@ One command to initialize an embedded [Andrej Karpathy's LLM Wiki](https://gist.
 
 The current project directory is the source material. AI-generated summaries, concepts, and synthesis pages are written directly to `.llm-wiki/`.
 
-Auto-installs Claude Code + Obsidian + recommended plugins (Skills & Plugins & Shortcuts), so AI can continuously build and maintain your project knowledge system.
+Auto-detects Claude Code / Codex / Gemini, installs missing base tools, and configures Obsidian + recommended plugins (Skills & Plugins & Shortcuts), so AI can continuously build and maintain your project knowledge system.
 
 Compatible with Claude Code, Codex, Copilot, Gemini CLI, OpenCode, and other mainstream AI agents out of the box.
 
@@ -26,7 +26,7 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 With options:
 
 ```bash
-# Only detect and install global tools (Claude Code, Obsidian, NodeJS, Agent Skills, etc.)
+# Only detect and install global tools (AI agent, Obsidian, NodeJS, Agent Skills, etc.)
 curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash -s -- --only-tools
 
 # Skip global tools detection/installation, only initialize .llm-wiki in the current project
@@ -84,7 +84,6 @@ Supported options (use as needed):
 | `--name <name>` | Wiki display name | Project directory name |
 | `--dir <directory>` | Project directory | Current directory |
 | `--lang <en\|zh>` | Wiki language | `en` |
-| `--yes, -y` | Skip all prompts, use defaults | - |
 | `--only-tools` | Install tools only, without creating wiki | - |
 | `--only-wiki` | Initialize `.llm-wiki` and `AGENTS.md` in the project, without installing tools | - |
 | `--only-obsidian` | Configure Obsidian in the project root only | - |
@@ -96,8 +95,8 @@ Detects what's already on your system and only installs what's missing.
 
 **Tools & Skills**
 
-- ✅ **Claude Code** — Recommended AI agent
-- ✅ **Node.js** — Runtime for Claude Code and Skills CLI
+- ✅ **AI Agent** — Claude Code, Codex, or Gemini; Claude Code has the highest default priority when multiple are installed
+- ✅ **Node.js** — Runtime for Skills CLI and npm-installed agent CLIs
 - ✅ **Obsidian** — Wiki editor and visual graph viewer
 - ✅ **[kepano/obsidian-skills](https://github.com/kepano/obsidian-skills)** — Obsidian Markdown, CLI interaction, Bases database views, web scraping (defuddle)
 - ✅ **[axtonliu/visual-skills](https://github.com/axtonliu/axton-obsidian-visual-skills)** — Excalidraw diagrams, Mermaid charts, Obsidian Canvas, JSON Canvas
@@ -183,7 +182,7 @@ project/
 
 **Suitable for**: personal knowledge management, technical research, domain learning notes, team knowledge bases — any scenario where you want AI to help you accumulate and organize knowledge over time.
 
-**How it works**: [Claude Code](https://claude.ai/claude-code) serves as the AI agent that reads, writes and maintains the wiki; [Obsidian](https://obsidian.md) serves as the visual editor and reader. You chat with the AI to ingest sources, query knowledge, and run health checks — while browsing and navigating the wiki graph in Obsidian.
+**How it works**: Claude Code, Codex, or Gemini can serve as the AI agent that reads, writes and maintains the wiki; Claude Code is the default priority agent, but not the only supported option. [Obsidian](https://obsidian.md) serves as the visual editor and reader. You chat with the AI to ingest sources, query knowledge, and run health checks — while browsing and navigating the wiki graph in Obsidian.
 
 **Three-layer architecture**: project root (source material) → `.llm-wiki/` (LLM-maintained pages) → Schema (`AGENTS.md`)
 

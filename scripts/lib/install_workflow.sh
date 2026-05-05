@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# UTF-8 (no BOM)
 # llm-wiki-builder — Initialize an embedded project LLM Wiki in one command
 # Author: eleven-net-cn
 #
@@ -47,9 +48,14 @@ HAS_GIT=false
 HAS_NODE=false
 HAS_BREW=false
 HAS_OBSIDIAN=false
-HAS_CLAUDE_CODE=false
+HAS_AI_AGENT=false
 HAS_OBSIDIAN_SKILLS=false
 HAS_VISUAL_SKILLS=false
+AVAILABLE_AI_AGENT_KEYS=()
+AI_AGENT_SELECTION_DONE=false
+SELECTED_AI_AGENT_KEY=""
+SELECTED_AI_AGENT_NAME=""
+SELECTED_AI_AGENT_PATH=""
 
 # Version strings (set by detect_installed)
 VER_GIT=""
@@ -208,6 +214,10 @@ detect_os() {
       warn "No supported Linux package manager (apt/dnf/pacman) detected — tools will require manual install."
     fi
   elif [[ "$OS" == "windows" ]]; then
+    if [[ "${MSYS:-}" != *winsymlinks:* ]]; then
+      export MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict"
+      info "MSYS symlink mode: ${CYAN}winsymlinks:nativestrict${RESET}"
+    fi
     # Windows package managers: winget, chocolatey, scoop
     if   command -v winget    &>/dev/null; then PKG_MGR="winget"
     elif command -v choco     &>/dev/null; then PKG_MGR="choco"
@@ -224,6 +234,20 @@ detect_os() {
 # ═══════════════════════════════════════════════════════════════════════════════
 
 detect_installed() {
+  HAS_GIT=false
+  HAS_NODE=false
+  HAS_OBSIDIAN=false
+  HAS_AI_AGENT=false
+  HAS_OBSIDIAN_SKILLS=false
+  HAS_VISUAL_SKILLS=false
+  AVAILABLE_AI_AGENT_KEYS=()
+  VER_GIT=""
+  VER_NODE=""
+
+  if declare -F detect_runtime_paths >/dev/null 2>&1; then
+    detect_runtime_paths
+  fi
+
   # Git
   if command -v git &>/dev/null; then
     HAS_GIT=true
@@ -239,11 +263,14 @@ detect_installed() {
     VER_NODE=$(node --version 2>/dev/null)
   fi
 
-  # Claude Code
-  command -v claude &>/dev/null && HAS_CLAUDE_CODE=true
+  # AI Agent
+  detect_ai_agents
+  select_ai_agent || true
 
   # Obsidian
-  if [[ "$OS" == "macos" && -d "/Applications/Obsidian.app" ]]; then
+  if [[ -n "${DETECTED_OBSIDIAN_PATH:-}" ]]; then
+    HAS_OBSIDIAN=true
+  elif [[ "$OS" == "macos" && -d "/Applications/Obsidian.app" ]]; then
     HAS_OBSIDIAN=true
   elif [[ "$OS" == "linux" ]] && command -v obsidian &>/dev/null; then
     HAS_OBSIDIAN=true
@@ -257,37 +284,24 @@ detect_installed() {
     fi
   fi
 
-  # Claude Code Skills — check ~/.agents/skills/ (preferred), ~/.claude/skills/, and plugins/marketplaces/
-  local agents_dir="$HOME/.agents/skills"
-  local skills_dir="$HOME/.claude/skills"
-  local plugins_dir="$HOME/.claude/plugins/marketplaces"
-
-  if [[ -d "$agents_dir/obsidian-markdown" || -d "$agents_dir/obsidian-cli" || \
-        -d "$skills_dir/obsidian-markdown" || -d "$skills_dir/obsidian-cli" ]]; then
-    HAS_OBSIDIAN_SKILLS=true
-  fi
-  if [[ -d "$agents_dir/excalidraw-diagram" || -d "$agents_dir/obsidian-canvas-creator" || \
-        -d "$skills_dir/excalidraw-diagram" || -d "$skills_dir/obsidian-canvas-creator" || \
-        -d "$plugins_dir/axton-obsidian-visual-skills/excalidraw-diagram" ]]; then
-    HAS_VISUAL_SKILLS=true
-  fi
+  # Skills for selected AI agent only
+  detect_selected_agent_skills
 }
 
 print_detection_results() {
   printf "\n"
 
-  # Claude Code
-  if $HAS_CLAUDE_CODE; then
-    printf "  ${GREEN}✓${RESET}  %-20s ${DIM}installed${RESET}\n" "Claude Code"
+  if $HAS_AI_AGENT; then
+    printf "  ${GREEN}✓${RESET}  %-20s ${DIM}installed: %s${RESET}\n" "AI Agent" "$SELECTED_AI_AGENT_NAME"
   else
-    printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}recommended AI agent${RESET}\n" "Claude Code"
+    printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}recommended: %s${RESET}\n" "AI Agent" "$(agent_names_joined " / ")"
   fi
 
   # Node.js
   if $HAS_NODE; then
     printf "  ${GREEN}✓${RESET}  %-20s ${DIM}%s${RESET}\n" "Node.js" "$VER_NODE"
   else
-    printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}required for Claude Code${RESET}\n" "Node.js"
+    printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}required for skills / agent CLIs${RESET}\n" "Node.js"
   fi
 
   # Obsidian
@@ -299,16 +313,16 @@ print_detection_results() {
 
   # Obsidian Skills
   if $HAS_OBSIDIAN_SKILLS; then
-    printf "  ${GREEN}✓${RESET}  %-20s ${DIM}installed${RESET}\n" "Obsidian Skills"
+    printf "  ${GREEN}✓${RESET}  %-20s ${DIM}%s${RESET}\n" "Obsidian Skills" "$(skills_status_text "OBSIDIAN")"
   else
-    printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}kepano/obsidian-skills${RESET}\n" "Obsidian Skills"
+    printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}%s${RESET}\n" "Obsidian Skills" "$(skills_status_text "OBSIDIAN")"
   fi
 
   # Visual Skills
   if $HAS_VISUAL_SKILLS; then
-    printf "  ${GREEN}✓${RESET}  %-20s ${DIM}installed${RESET}\n" "Visual Skills"
+    printf "  ${GREEN}✓${RESET}  %-20s ${DIM}%s${RESET}\n" "Visual Skills" "$(skills_status_text "VISUAL")"
   else
-    printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}excalidraw / canvas / mermaid${RESET}\n" "Visual Skills"
+    printf "  ${YELLOW}✗${RESET}  %-20s ${CYAN}%s${RESET}\n" "Visual Skills" "$(skills_status_text "VISUAL")"
   fi
 
   # Git
@@ -324,8 +338,48 @@ print_detection_results() {
   printf "\n"
 }
 
+print_missing_items_details() {
+  local skills_root="" global_root="" default_agent_key="" default_agent_name=""
+  local obs_status="" visual_status=""
+
+  printf "  ${BOLD}Missing items detail:${RESET}\n"
+  if ! $HAS_AI_AGENT; then
+    default_agent_key="$(default_ai_agent_key 2>/dev/null || true)"
+    default_agent_name="$(agent_field "$default_agent_key" display_name 2>/dev/null || true)"
+    printf "    - AI Agent: not detected\n"
+    printf "      Action: install default priority agent (${default_agent_name:-Claude Code})\n"
+  fi
+  if ! $HAS_NODE; then
+    printf "    - Node.js: not detected\n"
+    printf "      Action: install Node.js for skills and agent CLIs\n"
+  fi
+  if ! $HAS_OBSIDIAN; then
+    printf "    - Obsidian: not detected\n"
+    printf "      Action: install Obsidian application\n"
+  fi
+  if ! $HAS_OBSIDIAN_SKILLS && $HAS_AI_AGENT; then
+    skills_root="$(selected_skills_root_dir 2>/dev/null || true)"
+    global_root="$(global_skills_root_dir 2>/dev/null || true)"
+    obs_status="$(skills_status_text "OBSIDIAN")"
+    printf "    - Obsidian Skills: %s\n" "$obs_status"
+    printf "      Action: link from %s to %s\n" "${global_root:-~/.agents/skills}" "${skills_root:-<selected agent skills dir>}"
+  fi
+  if ! $HAS_VISUAL_SKILLS && $HAS_AI_AGENT; then
+    skills_root="$(selected_skills_root_dir 2>/dev/null || true)"
+    global_root="$(global_skills_root_dir 2>/dev/null || true)"
+    visual_status="$(skills_status_text "VISUAL")"
+    printf "    - Visual Skills: %s\n" "$visual_status"
+    printf "      Action: link from %s to %s\n" "${global_root:-~/.agents/skills}" "${skills_root:-<selected agent skills dir>}"
+  fi
+  if ! $HAS_GIT; then
+    printf "    - Git: not detected\n"
+    printf "      Action: install Git for repository workflows\n"
+  fi
+  printf "\n"
+}
+
 is_all_installed() {
-  $HAS_OBSIDIAN && $HAS_NODE && $HAS_CLAUDE_CODE && \
+  $HAS_OBSIDIAN && $HAS_NODE && $HAS_AI_AGENT && \
   $HAS_OBSIDIAN_SKILLS && $HAS_VISUAL_SKILLS && $HAS_GIT
 }
 
@@ -338,16 +392,35 @@ print_manual_guide() {
   $HAS_NODE || \
     printf "  %-20s ${DIM}${UNDERLINE}https://nodejs.org${RESET}\n" "Node.js"
 
-  if ! $HAS_CLAUDE_CODE; then
-    printf "  %-20s ${DIM}${UNDERLINE}https://claude.ai/claude-code${RESET}\n" "Claude Code"
-    printf "  %-20s ${GREEN}npm install -g @anthropic-ai/claude-code${RESET}\n" ""
+  if ! $HAS_AI_AGENT; then
+    local default_agent_key="" default_agent_url="" default_agent_cmd="" agent_names=""
+    default_agent_key="$(default_ai_agent_key 2>/dev/null || true)"
+    default_agent_url="$(agent_field "$default_agent_key" install_url 2>/dev/null || true)"
+    default_agent_cmd="$(agent_field "$default_agent_key" install_cmd 2>/dev/null || true)"
+    agent_names="$(agent_names_joined " / " 2>/dev/null || true)"
+    printf "  %-20s ${DIM}${UNDERLINE}%s${RESET} ${DIM}(default priority; %s supported)${RESET}\n" "AI Agent" "$default_agent_url" "$agent_names"
+    printf "  %-20s ${GREEN}%s${RESET}\n" "" "$default_agent_cmd"
   fi
 
   $HAS_OBSIDIAN_SKILLS || \
     printf "  %-20s ${DIM}${UNDERLINE}https://github.com/kepano/obsidian-skills${RESET}\n" "Obsidian Skills"
+  if ! $HAS_OBSIDIAN_SKILLS && $HAS_AI_AGENT; then
+    local skills_root="" global_skills_root=""
+    skills_root="$(selected_skills_root_dir 2>/dev/null || true)"
+    global_skills_root="$(global_skills_root_dir 2>/dev/null || true)"
+    printf "  %-20s ${GREEN}npx skills add kepano/obsidian-skills -g -y${RESET}\n" ""
+    printf "  %-20s ${DIM}link %s/<skill> -> %s/<skill>${RESET}\n" "" "${global_skills_root:-~/.agents/skills}" "${skills_root:-<selected agent skills dir>}"
+  fi
 
   $HAS_VISUAL_SKILLS || \
     printf "  %-20s ${DIM}${UNDERLINE}https://github.com/axtonliu/axton-obsidian-visual-skills${RESET}\n" "Visual Skills"
+  if ! $HAS_VISUAL_SKILLS && $HAS_AI_AGENT; then
+    local skills_root_v="" global_skills_root_v=""
+    skills_root_v="$(selected_skills_root_dir 2>/dev/null || true)"
+    global_skills_root_v="$(global_skills_root_dir 2>/dev/null || true)"
+    printf "  %-20s ${GREEN}npx skills add axtonliu/axton-obsidian-visual-skills -g -y${RESET}\n" ""
+    printf "  %-20s ${DIM}link %s/<skill> -> %s/<skill>${RESET}\n" "" "${global_skills_root_v:-~/.agents/skills}" "${skills_root_v:-<selected agent skills dir>}"
+  fi
 
   $HAS_GIT || \
     printf "  %-20s ${DIM}${UNDERLINE}https://git-scm.com${RESET}\n" "Git"
@@ -567,35 +640,46 @@ install_jq() {
   fi
 }
 
-# ─── Claude Code ─────────────────────────────────────────────────────────────
+# ─── Default AI Agent ────────────────────────────────────────────────────────
 
-install_claude_code() {
-  $HAS_CLAUDE_CODE && return 0
+install_default_ai_agent() {
+  $HAS_AI_AGENT && return 0
+
+  local agent_key="" agent_name="" agent_command="" install_url="" install_cmd=""
+  agent_key="$(default_ai_agent_key 2>/dev/null || true)"
+  [[ -n "$agent_key" ]] || return 1
+  agent_name="$(agent_field "$agent_key" display_name)"
+  agent_command="$(agent_field "$agent_key" command)"
+  install_url="$(agent_field "$agent_key" install_url)"
+  install_cmd="$(agent_field "$agent_key" install_cmd)"
 
   # Requires Node.js + npm
   if ! command -v npm &>/dev/null; then
     warn "npm not available — install Node.js first"
-    print_manual_install "Claude Code" "https://claude.ai/claude-code" \
-      "Requires Node.js. After Node is installed: npm install -g @anthropic-ai/claude-code"
+    print_manual_install "$agent_name" "$install_url" \
+      "Requires Node.js. After Node is installed: $install_cmd"
     return 1
   fi
 
-  info "Installing ${GREEN}Claude Code${RESET}..."
-  if npm install -g @anthropic-ai/claude-code 2>&1 | tail -5; then
+  info "Installing ${GREEN}$agent_name${RESET}..."
+  if sh -c "$install_cmd" 2>&1 | tail -5; then
     # Verify installation
     sleep 2  # Give npm time to update PATH
-    if command -v claude &>/dev/null; then
-      HAS_CLAUDE_CODE=true
-      success "Claude Code installed"
+    if command -v "$agent_command" &>/dev/null; then
+      set_agent_detected_path "$agent_key" "$(command -v "$agent_command" 2>/dev/null || true)"
+      detect_ai_agents
+      HAS_AI_AGENT=true
+      set_selected_ai_agent "$agent_key"
+      success "$agent_name installed"
     else
-      warn "Install succeeded but 'claude' command not found"
-      print_manual_install "Claude Code" "https://claude.ai/claude-code" \
+      warn "Install succeeded but '$agent_command' command not found"
+      print_manual_install "$agent_name" "$install_url" \
         "May need to restart terminal or add npm global bin to PATH"
       return 1
     fi
   else
-    print_manual_install "Claude Code" "https://claude.ai/claude-code" \
-      "Run manually: npm install -g @anthropic-ai/claude-code"
+    print_manual_install "$agent_name" "$install_url" \
+      "Run manually: $install_cmd"
     return 1
   fi
 }
@@ -673,55 +757,255 @@ install_git() {
   fi
 }
 
-# ─── Claude Code Skills ──────────────────────────────────────────────────────
+# ─── AI Agent Skills ─────────────────────────────────────────────────────────
+
+SKILLS_COPY_FALLBACK_WARNED=false
+SKILLS_COPY_FALLBACK_DECISION=""
+SKILLS_REPLACE_NON_LINK_DECISION=""
+
+global_skill_names_exist() {
+  local source_root="" skill_name
+  source_root="$(global_skills_root_dir)"
+  for skill_name in "$@"; do
+    [[ -d "$source_root/$skill_name" ]] || return 1
+  done
+  return 0
+}
+
+warn_skill_copy_fallback() {
+  local target_root="${1:-}"
+  if ! $SKILLS_COPY_FALLBACK_WARNED; then
+    warn "Copy fallback approved; copied managed skills into selected agent directory: $target_root (still not counted as linked)"
+    SKILLS_COPY_FALLBACK_WARNED=true
+  fi
+}
+
+print_windows_symlink_admin_hint() {
+  if [[ "${OS:-}" == "windows" ]]; then
+    warn "Tip: restart Git Bash or PowerShell as Administrator, then retry symlink creation."
+  fi
+}
+
+allow_skill_copy_fallback() {
+  local target_root="${1:-}"
+  if [[ "$SKILLS_COPY_FALLBACK_DECISION" == "yes" ]]; then
+    return 0
+  fi
+  if [[ "$SKILLS_COPY_FALLBACK_DECISION" == "no" ]]; then
+    return 1
+  fi
+
+  warn "Symlink unavailable for selected agent directory: $target_root"
+  print_windows_symlink_admin_hint
+  if $NON_INTERACTIVE; then
+    warn "Copy fallback requires interactive confirmation."
+    SKILLS_COPY_FALLBACK_DECISION="no"
+    return 1
+  fi
+
+  if prompt_confirm "Allow copy fallback into selected agent directory?" "N"; then
+    SKILLS_COPY_FALLBACK_DECISION="yes"
+    return 0
+  fi
+
+  SKILLS_COPY_FALLBACK_DECISION="no"
+  warn "Copy fallback declined; managed skills will remain missing until symlink works."
+  return 1
+}
+
+allow_replace_non_link_targets() {
+  local target_root="${1:-}"
+  if [[ "$SKILLS_REPLACE_NON_LINK_DECISION" == "yes" ]]; then
+    return 0
+  fi
+  if [[ "$SKILLS_REPLACE_NON_LINK_DECISION" == "no" ]]; then
+    return 1
+  fi
+
+  warn "Non-symlink skill target exists under selected agent directory: $target_root"
+  print_windows_symlink_admin_hint
+  if $NON_INTERACTIVE; then
+    warn "Replacement requires interactive confirmation."
+    SKILLS_REPLACE_NON_LINK_DECISION="no"
+    return 1
+  fi
+
+  if prompt_confirm "Replace existing non-symlink skill targets with symlinks?" "N"; then
+    SKILLS_REPLACE_NON_LINK_DECISION="yes"
+    return 0
+  fi
+
+  SKILLS_REPLACE_NON_LINK_DECISION="no"
+  warn "Replacement declined; managed skills will remain missing until non-symlink targets are replaced."
+  return 1
+}
+
+cleanup_skill_target_if_safe() {
+  local target_root="$1" target_dir="$2"
+  [[ -n "$target_root" && -n "$target_dir" ]] || return 1
+  case "$target_dir" in
+    "$target_root"/*)
+      rm -rf -- "$target_dir" 2>/dev/null || true
+      return 0
+      ;;
+    *)
+      warn "Refusing to remove unexpected path outside selected agent directory: $target_dir"
+      return 1
+      ;;
+  esac
+}
+
+link_skill_to_selected_agent() {
+  local skill_name="$1"
+  local source_root="" target_root="" source_dir="" target_dir="" target_parent="" link_target=""
+
+  source_root="$(global_skills_root_dir)"
+  target_root="$(selected_skills_root_dir 2>/dev/null || true)"
+  [[ -n "$target_root" ]] || { warn "Cannot resolve selected AI agent skills directory"; return 1; }
+
+  source_dir="$source_root/$skill_name"
+  target_dir="$target_root/$skill_name"
+  target_parent="$(dirname "$target_dir")"
+
+  if [[ ! -d "$source_dir" ]]; then
+    warn "Global skill not found after install: $source_dir"
+    return 1
+  fi
+
+  mkdir -p "$target_parent"
+
+  if [[ -L "$target_dir" ]]; then
+    link_target="$(readlink "$target_dir" 2>/dev/null || true)"
+    if [[ "$link_target" == "$source_dir" ]]; then
+      return 0
+    fi
+    if ! allow_replace_non_link_targets "$target_root"; then
+      warn "Skill target links elsewhere, replacement not approved: $target_dir"
+      return 1
+    fi
+    cleanup_skill_target_if_safe "$target_root" "$target_dir" || return 1
+  fi
+
+  if [[ -e "$target_dir" ]]; then
+    if ! allow_replace_non_link_targets "$target_root"; then
+      warn "Skill target already exists and is not symlink, replacement not approved: $target_dir"
+      return 1
+    fi
+    cleanup_skill_target_if_safe "$target_root" "$target_dir" || return 1
+  fi
+
+  if ln -s "$source_dir" "$target_dir" 2>/dev/null; then
+    if [[ -L "$target_dir" ]]; then
+      return 0
+    fi
+
+    # Some Windows shells report success but create a copied directory instead of a symlink.
+    if allow_skill_copy_fallback "$target_root"; then
+      if [[ -e "$target_dir" ]]; then
+        warn_skill_copy_fallback "$target_root"
+        return 0
+      fi
+      if cp -R "$source_dir" "$target_dir" 2>/dev/null; then
+        warn_skill_copy_fallback "$target_root"
+        return 0
+      fi
+      warn "Failed to copy skill to selected agent after symlink fallback approval: $skill_name"
+      return 1
+    fi
+
+    cleanup_skill_target_if_safe "$target_root" "$target_dir" || true
+    return 1
+  fi
+
+  if allow_skill_copy_fallback "$target_root"; then
+    if cp -R "$source_dir" "$target_dir" 2>/dev/null; then
+      warn_skill_copy_fallback "$target_root"
+      return 0
+    fi
+  fi
+
+  warn "Failed to link or copy skill to selected agent: $skill_name"
+  return 1
+}
+
+link_skill_names_to_selected_agent() {
+  local ok=true skill_name
+  for skill_name in "$@"; do
+    link_skill_to_selected_agent "$skill_name" || ok=false
+  done
+  $ok
+}
 
 install_skills() {
-  # Requires Node.js + npx
-  if ! command -v npx &>/dev/null; then
-    warn "npx not available — install Node.js first"
+  if ! $HAS_AI_AGENT; then
+    warn "No supported AI agent detected ($(agent_names_joined " / "))"
+    return 1
+  fi
+
+  local skills_root=""
+  skills_root="$(selected_skills_root_dir 2>/dev/null || true)"
+  if [[ -z "$skills_root" ]]; then
+    warn "Cannot resolve selected AI agent target for skills installation"
     return 1
   fi
 
   # Obsidian Skills (kepano)
   if ! $HAS_OBSIDIAN_SKILLS; then
-    info "Installing ${GREEN}kepano/obsidian-skills${RESET}..."
-    if npx -y skills add kepano/obsidian-skills -g -y 2>&1 | tail -3; then
-      # Re-check detection
-      if [[ -d "$HOME/.agents/skills/obsidian-markdown" ]] || \
-         [[ -d "$HOME/.agents/skills/obsidian-cli" ]] || \
-         [[ -d "$HOME/.claude/skills/obsidian-markdown" ]] || \
-         [[ -d "$HOME/.claude/skills/obsidian-cli" ]]; then
-        HAS_OBSIDIAN_SKILLS=true
-        success "kepano/obsidian-skills installed"
-      else
-        warn "Install succeeded but skills not detected in expected locations"
-      fi
+    if global_skill_names_exist $(obsidian_skill_names); then
+      info "Linking ${GREEN}kepano/obsidian-skills${RESET} from global skills store..."
+      link_skill_names_to_selected_agent $(obsidian_skill_names) || true
+      detect_selected_agent_skills
     else
-      warn "Failed to install kepano/obsidian-skills"
-      print_manual_install "obsidian-skills" "https://github.com/kepano/obsidian-skills" \
-        "Run manually: npx skills add kepano/obsidian-skills -g"
+      if ! command -v npx &>/dev/null; then
+        warn "npx not available - install Node.js first"
+        print_manual_install "obsidian-skills" "https://github.com/kepano/obsidian-skills" \
+          "Run manually: npx skills add kepano/obsidian-skills -g -y, then link ~/.agents/skills/<skill> into $skills_root"
+      else
+        info "Installing ${GREEN}kepano/obsidian-skills${RESET}..."
+        if npx -y skills add kepano/obsidian-skills -g -y 2>&1 | tail -3; then
+          link_skill_names_to_selected_agent $(obsidian_skill_names) || true
+          detect_selected_agent_skills
+        else
+          warn "Failed to install kepano/obsidian-skills"
+          print_manual_install "obsidian-skills" "https://github.com/kepano/obsidian-skills" \
+            "Run manually: npx skills add kepano/obsidian-skills -g -y, then link ~/.agents/skills/<skill> into $skills_root"
+        fi
+      fi
+    fi
+    if $HAS_OBSIDIAN_SKILLS; then
+      success "kepano/obsidian-skills ready (target: $skills_root)"
+    else
+      warn "Required kepano/obsidian-skills are not linked into: $skills_root"
     fi
   fi
 
   # Visual Skills (axtonliu)
   if ! $HAS_VISUAL_SKILLS; then
-    info "Installing ${GREEN}axtonliu/axton-obsidian-visual-skills${RESET}..."
-    if npx -y skills add axtonliu/axton-obsidian-visual-skills -g -y 2>&1 | tail -3; then
-      # Re-check detection
-      if [[ -d "$HOME/.agents/skills/excalidraw-diagram" ]] || \
-         [[ -d "$HOME/.agents/skills/obsidian-canvas-creator" ]] || \
-         [[ -d "$HOME/.claude/skills/excalidraw-diagram" ]] || \
-         [[ -d "$HOME/.claude/skills/obsidian-canvas-creator" ]] || \
-         [[ -d "$HOME/.claude/plugins/marketplaces/axton-obsidian-visual-skills/excalidraw-diagram" ]]; then
-        HAS_VISUAL_SKILLS=true
-        success "axtonliu/visual-skills installed"
-      else
-        warn "Install succeeded but skills not detected in expected locations"
-      fi
+    if global_skill_names_exist $(visual_skill_names); then
+      info "Linking ${GREEN}axtonliu/axton-obsidian-visual-skills${RESET} from global skills store..."
+      link_skill_names_to_selected_agent $(visual_skill_names) || true
+      detect_selected_agent_skills
     else
-      warn "Failed to install axtonliu/axton-obsidian-visual-skills"
-      print_manual_install "axton-obsidian-visual-skills" "https://github.com/axtonliu/axton-obsidian-visual-skills" \
-        "Run manually: npx skills add axtonliu/axton-obsidian-visual-skills -g"
+      if ! command -v npx &>/dev/null; then
+        warn "npx not available - install Node.js first"
+        print_manual_install "axton-obsidian-visual-skills" "https://github.com/axtonliu/axton-obsidian-visual-skills" \
+          "Run manually: npx skills add axtonliu/axton-obsidian-visual-skills -g -y, then link ~/.agents/skills/<skill> into $skills_root"
+      else
+        info "Installing ${GREEN}axtonliu/axton-obsidian-visual-skills${RESET}..."
+        if npx -y skills add axtonliu/axton-obsidian-visual-skills -g -y 2>&1 | tail -3; then
+          link_skill_names_to_selected_agent $(visual_skill_names) || true
+          detect_selected_agent_skills
+        else
+          warn "Failed to install axtonliu/axton-obsidian-visual-skills"
+          print_manual_install "axton-obsidian-visual-skills" "https://github.com/axtonliu/axton-obsidian-visual-skills" \
+            "Run manually: npx skills add axtonliu/axton-obsidian-visual-skills -g -y, then link ~/.agents/skills/<skill> into $skills_root"
+        fi
+      fi
+    fi
+    if $HAS_VISUAL_SKILLS; then
+      success "axtonliu/visual-skills ready (target: $skills_root)"
+    else
+      warn "Required axtonliu/visual-skills are not linked into: $skills_root"
     fi
   fi
 }
@@ -732,13 +1016,15 @@ run_install() {
   [[ "$OS" == "macos" ]] && ! $HAS_BREW && ensure_brew || true
 
   install_node        || true
-  install_claude_code || true
+  if ! $HAS_AI_AGENT; then
+    install_default_ai_agent || true
+  fi
   install_obsidian    || true
   install_skills      || true
   install_git         || true
 
   # Final check — report what's still missing
-  if ! $HAS_OBSIDIAN || ! $HAS_NODE || ! $HAS_CLAUDE_CODE || ! $HAS_GIT; then
+  if ! $HAS_OBSIDIAN || ! $HAS_NODE || ! $HAS_AI_AGENT || ! $HAS_GIT; then
     warn "\nSome tools could not be auto-installed. Check the manual install guides above."
   fi
 }
@@ -1034,43 +1320,100 @@ _spinner() {
   done
 }
 
+obsidian_plugin_cache_root() {
+  printf '%s\n' "$HOME/.llm-wiki/plugin-cache"
+}
+
+obsidian_plugin_cache_dir() {
+  local repo="$1" plugin_id="$2"
+  local repo_key="${repo//\//__}"
+  printf '%s/%s__%s\n' "$(obsidian_plugin_cache_root)" "$plugin_id" "$repo_key"
+}
+
+plugin_cache_valid() {
+  local cache_dir="$1"
+  [[ -s "$cache_dir/main.js" && -s "$cache_dir/manifest.json" ]]
+}
+
+copy_plugin_bundle() {
+  local src_dir="$1" dst_dir="$2"
+  mkdir -p "$dst_dir" || return 1
+  cp "$src_dir/main.js" "$dst_dir/main.js" || return 1
+  cp "$src_dir/manifest.json" "$dst_dir/manifest.json" || return 1
+  if [[ -f "$src_dir/styles.css" ]]; then
+    cp "$src_dir/styles.css" "$dst_dir/styles.css" || return 1
+  else
+    rm -f "$dst_dir/styles.css"
+  fi
+  return 0
+}
+
 download_plugin() {
   local repo="$1" plugin_id="$2" target_dir="$3"
   local plugin_dir="$target_dir/.obsidian/plugins/$plugin_id"
+  local cache_dir=""
+  local cache_root=""
   local base_url="https://github.com/$repo/releases/latest/download"
+  local tmp_bundle_dir=""
+  local css_status="000"
+  local ok=true
 
-  mkdir -p "$plugin_dir"
+  cache_root="$(obsidian_plugin_cache_root)"
+  cache_dir="$(obsidian_plugin_cache_dir "$repo" "$plugin_id")"
+  mkdir -p "$cache_root"
 
+  if plugin_cache_valid "$cache_dir"; then
+    if copy_plugin_bundle "$cache_dir" "$plugin_dir"; then
+      printf "    ${GREEN}✓${RESET} %s ${DIM}(cache)${RESET}\n" "$plugin_id"
+      return 0
+    fi
+    warn "Plugin cache copy failed, refreshing from network: $plugin_id"
+    rm -rf "$cache_dir" 2>/dev/null || true
+  fi
+
+  tmp_bundle_dir="$(mktemp -d)"
   # Show download indicator
   printf "  ${CYAN}↓${RESET} ${DIM}Downloading %s...${RESET}" "$plugin_id"
-
-  local ok=true
   for file in main.js manifest.json; do
-    if ! curl -fsSL --max-time 30 "$base_url/$file" -o "$plugin_dir/$file" 2>/dev/null; then
+    if ! curl -fsSL --max-time 30 "$base_url/$file" -o "$tmp_bundle_dir/$file" 2>/dev/null; then
       ok=false; break
     fi
   done
 
   # styles.css is optional (many plugins ship none). Capture HTTP status so we
   # can distinguish "plugin has no CSS" (404) from "network hiccup" (timeout/5xx).
-  local css_status
   css_status=$(curl -sSL --max-time 30 -w '%{http_code}' \
-    -o "$plugin_dir/styles.css" "$base_url/styles.css" 2>/dev/null || echo "000")
+    -o "$tmp_bundle_dir/styles.css" "$base_url/styles.css" 2>/dev/null || echo "000")
   if [[ "$css_status" != "200" ]]; then
-    rm -f "$plugin_dir/styles.css"
+    rm -f "$tmp_bundle_dir/styles.css"
   fi
 
   # Clear download indicator and show result
   printf "\r%50s\r" ""  # Clear the line
 
-  if $ok && [[ -s "$plugin_dir/manifest.json" ]]; then
-    printf "    ${GREEN}✓${RESET} %s\n" "$plugin_id"
+  if $ok && [[ -s "$tmp_bundle_dir/manifest.json" ]]; then
+    rm -rf "$cache_dir" 2>/dev/null || true
+    if ! mv "$tmp_bundle_dir" "$cache_dir" 2>/dev/null; then
+      mkdir -p "$cache_dir"
+      cp -R "$tmp_bundle_dir/." "$cache_dir/" || true
+      rm -rf "$tmp_bundle_dir" 2>/dev/null || true
+    fi
+
+    if copy_plugin_bundle "$cache_dir" "$plugin_dir"; then
+      printf "    ${GREEN}✓${RESET} %s\n" "$plugin_id"
+    else
+      rm -rf "$plugin_dir" 2>/dev/null || true
+      printf "    ${YELLOW}⚠${RESET} %s ${DIM}install from cache failed${RESET}\n" "$plugin_id"
+      return 1
+    fi
+
     # Warn only when styles.css fetch failed due to network, not 404 (= plugin has no CSS)
     if [[ "$css_status" != "200" && "$css_status" != "404" ]]; then
       printf "      ${YELLOW}⚠${RESET} ${DIM}styles.css not downloaded (HTTP %s) — disable/enable plugin after re-running install${RESET}\n" "$css_status"
     fi
     return 0
   else
+    rm -rf "$tmp_bundle_dir" 2>/dev/null || true
     rm -rf "$plugin_dir"
     printf "    ${YELLOW}⚠${RESET} %s ${DIM}download failed${RESET}\n" "$plugin_id"
     return 1
@@ -1400,7 +1743,10 @@ print_success() {
     printf "  ${DIM}%d.${RESET} obsidian .               ${DIM}# open project as Obsidian vault${RESET}\n" "$step_n"
   fi
   step_n=$((step_n + 1))
-  printf "  ${DIM}%d.${RESET} claude                   ${DIM}# or codex / gemini / another agent${RESET}\n" "$step_n"
+  local agent_key="${SELECTED_AI_AGENT_KEY:-}" agent_cmd=""
+  [[ -n "$agent_key" ]] || agent_key="$(default_ai_agent_key 2>/dev/null || true)"
+  agent_cmd="$(agent_field "$agent_key" command 2>/dev/null || true)"
+  printf "  ${DIM}%d.${RESET} %-24s ${DIM}# selected/default AI agent${RESET}\n" "$step_n" "${agent_cmd:-ai-agent}"
   printf "  ${DIM}%d.${RESET} ${CYAN}%s${RESET}        ${DIM}# analysis output${RESET}\n" "$((step_n + 1))" "$abs_target"
   printf "\n"
 }
@@ -1419,14 +1765,13 @@ parse_args() {
         esac
         shift 2
         ;;
-      --non-interactive|--yes|-y) NON_INTERACTIVE=true; shift ;;
       --skip-install)    SKIP_INSTALL=true; shift ;;
       --only-tools)      ONLY_TOOLS=true; shift ;;
       --only-obsidian)   ONLY_OBSIDIAN=true; shift ;;
       --only-wiki)       ONLY_WIKI=true; shift ;;
       --help|-h)         usage; exit 0 ;;
       --version|-v)      echo "llm-wiki-builder v$VERSION"; exit 0 ;;
-      *)                 warn "Unknown option: $1"; shift ;;
+      *)                 fail "Unknown option: $1" ;;
     esac
   done
 
@@ -1464,7 +1809,6 @@ Options:
   --name <name>        Wiki display name (default: project directory name)
   --dir <directory>    Project directory (default: current directory)
   --lang <zh|en>       Wiki language (default: en)
-  --yes, -y            Skip all prompts, use defaults (non-interactive mode)
   --skip-install       Skip tool installation in default mode
   --help               Show this help
   --version            Show version
@@ -1475,9 +1819,6 @@ Environment:
 Examples:
   # Full interactive install
   bash install.sh
-
-  # Non-interactive full install
-  bash install.sh --yes --name my-project-wiki
 
   # Only install tools (no project changes)
   bash install.sh --only-tools
@@ -1583,24 +1924,25 @@ main() {
 
     if is_all_installed; then
       success "All tools already installed"
-    elif $NON_INTERACTIVE || prompt_confirm "Install missing tools?" "Y"; then
-      run_install
     else
-      print_manual_guide
+      print_missing_items_details
+      if prompt_confirm "Install missing tools?" "Y"; then
+        run_install
+      else
+        print_manual_guide
+      fi
     fi
     return 0
   fi
 
   resolve_project_context
-  if declare -F detect_runtime_paths >/dev/null 2>&1 && \
-     declare -F persist_detected_paths_once >/dev/null 2>&1; then
-    detect_runtime_paths
-    persist_detected_paths_once "$PROJECT_ROOT"
-  fi
 
   if $ONLY_OBSIDIAN; then
     info "Mode: ${GREEN}--only-obsidian${RESET} (configure Obsidian in project root)"
     detect_installed
+    if declare -F persist_detected_paths_once >/dev/null 2>&1; then
+      persist_detected_paths_once "$PROJECT_ROOT"
+    fi
 
     if ! $HAS_OBSIDIAN; then
       info "Obsidian not installed — installing..."
@@ -1632,6 +1974,9 @@ main() {
   fi
 
   detect_installed
+  if declare -F persist_detected_paths_once >/dev/null 2>&1; then
+    persist_detected_paths_once "$PROJECT_ROOT"
+  fi
 
   local total_steps=4
   local need_install=false
@@ -1649,6 +1994,7 @@ main() {
   if $SKIP_INSTALL; then
     info "Skipping tool installation ${DIM}(--skip-install)${RESET}"
   elif $need_install; then
+    print_missing_items_details
     if prompt_confirm "Install missing items?" "Y"; then
       stepn "$current_step" "$total_steps" "Installing tools"
       run_install

@@ -6,7 +6,7 @@
 
 当前项目目录本身就是源材料；AI 生成的摘要、概念页和综合分析会直接写入 `.llm-wiki/`。
 
-自动安装 Claude Code + Obsidian + 推荐的插件（Skills & Plugins & 快捷键）等，让 AI 帮你持续积累和维护项目知识体系。
+自动检测 Claude Code / Codex / Gemini，安装缺失的基础工具，并配置 Obsidian + 推荐的插件（Skills & Plugins & 快捷键）等，让 AI 帮你持续积累和维护项目知识体系。
 
 自动兼容 Claude Code、Codex、Copilot、Gemini CLI、OpenCode 等主流 AI Agent 使用。
 
@@ -26,7 +26,7 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 参数示例：
 
 ```bash
-# 仅检测、安装全局工具套件（Claude Code、Obsidian、NodeJS、Agent Skills 等）
+# 仅检测、安装全局工具套件（AI Agent、Obsidian、NodeJS、Agent Skills 等）
 curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash -s -- --only-tools
 
 # 跳过全局工具套件的检测、安装，仅在当前项目初始化 .llm-wiki
@@ -84,7 +84,6 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 | `--name <name>` | Wiki 显示名称 | 项目目录名 |
 | `--dir <directory>` | 项目目录 | 当前目录 |
 | `--lang <en\|zh>` | Wiki 语言 | `en` |
-| `--yes, -y` | 跳过所有提示，使用默认值 | - |
 | `--only-tools` | 仅安装工具套件，不创建 wiki 知识库 | - |
 | `--only-wiki` | 仅在项目中初始化 `.llm-wiki` 和 `AGENTS.md`，不安装工具 | - |
 | `--only-obsidian` | 仅在项目根目录配置 Obsidian | - |
@@ -96,8 +95,8 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 
 **工具 & Skills**
 
-- ✅ **Claude Code** — 默认推荐的 AI Agent
-- ✅ **Node.js** — Claude Code 和 Skills CLI 运行时
+- ✅ **AI Agent** — 支持 Claude Code、Codex、Gemini；检测到多个时默认优先 Claude Code
+- ✅ **Node.js** — Skills CLI 和 npm 安装的 Agent CLI 运行时
 - ✅ **Obsidian** — Wiki 编辑器和可视化图谱查看器
 - ✅ **[kepano/obsidian-skills](https://github.com/kepano/obsidian-skills)** — Obsidian Markdown、CLI 交互、Bases 数据库视图、网页清洗（defuddle）
 - ✅ **[axtonliu/visual-skills](https://github.com/axtonliu/axton-obsidian-visual-skills)** — Excalidraw 图表、Mermaid 可视化、Obsidian Canvas、JSON Canvas
@@ -183,7 +182,7 @@ project/
 
 **适用场景**：个人知识管理、技术调研、领域学习笔记、团队知识库 —— 任何需要 AI 帮你长期积累和整理知识的场景。
 
-**工作方式**：[Claude Code](https://claude.ai/claude-code) 作为 AI Agent 负责读写和维护 wiki；[Obsidian](https://obsidian.md) 作为可视化编辑器和阅读器。你通过与 AI 对话来摄取资料、查询知识、运行巡检 —— 同时在 Obsidian 中浏览和导航知识图谱。
+**工作方式**：Claude Code、Codex 或 Gemini 都可以作为 AI Agent 负责读写和维护 wiki；Claude Code 是默认优先 Agent，但不是唯一可用 Agent。[Obsidian](https://obsidian.md) 作为可视化编辑器和阅读器。你通过与 AI 对话来摄取资料、查询知识、运行巡检 —— 同时在 Obsidian 中浏览和导航知识图谱。
 
 **三层架构**：项目根目录（源材料）→ `.llm-wiki/`（LLM 维护的页面）→ Schema（`AGENTS.md`）
 
