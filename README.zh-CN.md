@@ -6,7 +6,7 @@
 
 当前项目目录本身就是源材料；AI 生成的摘要、概念页和综合分析会直接写入 `llm-wiki/`。
 
-自动检测 Claude Code / Codex / Gemini，安装缺失的基础工具，并配置 Obsidian + 推荐的插件（Skills & Plugins & 快捷键）等，让 AI 帮你持续积累和维护项目知识体系。
+自动检测 Claude Code / Codex / Gemini / OpenCode，安装缺失的基础工具，并配置 Obsidian + 推荐的插件（Skills & Plugins & 快捷键）等，让 AI 帮你持续积累和维护项目知识体系。
 
 自动兼容 Claude Code、Codex、Copilot、Gemini CLI、OpenCode 等主流 AI Agent 使用。
 
@@ -100,7 +100,7 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 
 **工具 & Skills**
 
-- ✅ **AI Agent** — 支持 Claude Code、Codex、Gemini；检测到多个时默认优先 Claude Code
+- ✅ **AI Agent** — 支持 Claude Code、Codex、Gemini、OpenCode；检测到多个时默认优先 Claude Code
 - ✅ **Node.js** — Skills CLI 和 npm 安装的 Agent CLI 运行时
 - ✅ **Obsidian** — Wiki 编辑器和可视化图谱查看器
 - ✅ **[kepano/obsidian-skills](https://github.com/kepano/obsidian-skills)** — Obsidian Markdown、CLI 交互、Bases 数据库视图、网页清洗（defuddle）
@@ -151,7 +151,7 @@ curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/instal
 当你希望在长期 wiki 之外增加一层结构化项目地图时，可以使用 `--with-graphify`。Graphify 输出保留在 `graphify-out/`（`GRAPH_REPORT.md`、`graph.json`、`graph.html`），`llm-wiki-builder` 继续把 `llm-wiki/` 作为长期 Markdown 知识库。
 
 - 需要 Python 3.10+；当前 PyPI 包名是 `graphifyy`，CLI 仍是 `graphify`。
-- 安装器会按当前选中的 AI Agent 注册 Graphify：Claude Code、Codex 或 Gemini。
+- 安装器会按当前选中的 AI Agent 注册 Graphify：Claude Code、Codex、Gemini 或 OpenCode。
 - 如果选中 Codex，安装器会先询问，再修改 `~/.codex/config.toml` 中的 `multi_agent = true`，并在修改前备份。
 - 安装器会在首次建图前询问，因为处理文档、PDF、图片、音频、视频等可能消耗模型/API额度。
 - Graphify 的 `--wiki` 输出不会自动合并进 `llm-wiki/`。
@@ -199,7 +199,7 @@ project/
 
 **适用场景**：个人知识管理、技术调研、领域学习笔记、团队知识库 —— 任何需要 AI 帮你长期积累和整理知识的场景。
 
-**工作方式**：Claude Code、Codex 或 Gemini 都可以作为 AI Agent 负责读写和维护 wiki；Claude Code 是默认优先 Agent，但不是唯一可用 Agent。[Obsidian](https://obsidian.md) 作为可视化编辑器和阅读器。你通过与 AI 对话来摄取资料、查询知识、运行巡检 —— 同时在 Obsidian 中浏览和导航知识图谱。
+**工作方式**：Claude Code、Codex、Gemini 或 OpenCode 都可以作为 AI Agent 负责读写和维护 wiki；Claude Code 是默认优先 Agent，但不是唯一可用 Agent。[Obsidian](https://obsidian.md) 作为可视化编辑器和阅读器。你通过与 AI 对话来摄取资料、查询知识、运行巡检 —— 同时在 Obsidian 中浏览和导航知识图谱。
 
 **三层架构**：项目根目录（源材料）→ `llm-wiki/`（LLM 维护的页面）→ Schema（`AGENTS.md`）
 

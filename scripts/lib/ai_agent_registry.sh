@@ -7,6 +7,7 @@ AI_AGENT_REGISTRY=(
   "claude|Claude Code|claude|claude-code|~/.claude/skills|https://claude.ai/claude-code|npm install -g @anthropic-ai/claude-code"
   "codex|Codex|codex|codex|~/.codex/skills|https://github.com/openai/codex|npm install -g @openai/codex"
   "gemini|Gemini|gemini|gemini-cli|~/.gemini/skills|https://github.com/google-gemini/gemini-cli|npm install -g @google/gemini-cli"
+  "opencode|OpenCode|opencode|opencode|~/.config/opencode/skills|https://opencode.ai/install|npm install -g opencode-ai"
 )
 
 AVAILABLE_AI_AGENT_KEYS=()

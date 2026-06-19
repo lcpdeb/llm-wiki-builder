@@ -6,7 +6,7 @@ skills CLI install is needed.
 The `skills` CLI global store is `$HOME/.agents/skills`. After each package is
 installed, link the managed skill directories from that global store into the
 currently selected agent skills directory (`~/.claude/skills`, `~/.codex/skills`,
-or `~/.gemini/skills`).
+`~/.gemini/skills`, or `~/.config/opencode/skills`).
 
 Before running `npx`, check whether every managed skill for that package already
 exists in `$HOME/.agents/skills`. If the global store is already complete, skip

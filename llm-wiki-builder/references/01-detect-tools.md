@@ -11,8 +11,9 @@ Use `command -v <tool>` for CLI tools. Do not use `which` (not POSIX-portable on
 - `command -v claude` — Claude Code
 - `command -v codex` — Codex CLI
 - `command -v gemini` — Gemini CLI
+- `command -v opencode` — OpenCode
 
-For the installer's AI Agent requirement, Claude Code, Codex, and Gemini are the supported checks. If multiple are found, choose interactively and use this default priority: Claude Code > Codex > Gemini. Do not treat Claude Code as missing when Codex or Gemini is already available.
+For the installer's AI Agent requirement, Claude Code, Codex, Gemini, and OpenCode are the supported checks. If multiple are found, choose interactively and use this default priority: Claude Code > Codex > Gemini > OpenCode. Do not treat Claude Code as missing when Codex, Gemini, or OpenCode is already available.
 
 If a command is missing, its exit status is non-zero; use this in shell logic:
 
@@ -37,8 +38,9 @@ Detection is scoped to the currently selected AI agent. Do not count
 `skills` CLI before the installer links skills into the selected agent.
 
 Installed only when all managed Obsidian skills are present as symlinks under
-the selected agent skills directory (`~/.claude/skills`, `~/.codex/skills`, or
-`~/.gemini/skills`) and each symlink points to `$HOME/.agents/skills/<skill>`:
+the selected agent skills directory (`~/.claude/skills`, `~/.codex/skills`,
+`~/.gemini/skills`, or `~/.config/opencode/skills`) and each symlink points to
+`$HOME/.agents/skills/<skill>`:
 
 1. `<selected-agent-skills>/defuddle`
 2. `<selected-agent-skills>/json-canvas`

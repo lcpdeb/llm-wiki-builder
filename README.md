@@ -6,7 +6,7 @@ One command to initialize an embedded [Andrej Karpathy's LLM Wiki](https://gist.
 
 The current project directory is the source material. AI-generated summaries, concepts, and synthesis pages are written directly to `llm-wiki/`.
 
-Auto-detects Claude Code / Codex / Gemini, installs missing base tools, and configures Obsidian + recommended plugins (Skills & Plugins & Shortcuts), so AI can continuously build and maintain your project knowledge system.
+Auto-detects Claude Code / Codex / Gemini / OpenCode, installs missing base tools, and configures Obsidian + recommended plugins (Skills & Plugins & Shortcuts), so AI can continuously build and maintain your project knowledge system.
 
 Compatible with Claude Code, Codex, Copilot, Gemini CLI, OpenCode, and other mainstream AI agents out of the box.
 
@@ -100,7 +100,7 @@ Detects what's already on your system and only installs what's missing.
 
 **Tools & Skills**
 
-- ✅ **AI Agent** — Claude Code, Codex, or Gemini; Claude Code has the highest default priority when multiple are installed
+- ✅ **AI Agent** — Claude Code, Codex, Gemini, or OpenCode; Claude Code has the highest default priority when multiple are installed
 - ✅ **Node.js** — Runtime for Skills CLI and npm-installed agent CLIs
 - ✅ **Obsidian** — Wiki editor and visual graph viewer
 - ✅ **[kepano/obsidian-skills](https://github.com/kepano/obsidian-skills)** — Obsidian Markdown, CLI interaction, Bases database views, web scraping (defuddle)
@@ -151,7 +151,7 @@ Detects what's already on your system and only installs what's missing.
 Use `--with-graphify` when you want a structural project map alongside the durable wiki. Graphify writes to `graphify-out/` (`GRAPH_REPORT.md`, `graph.json`, `graph.html`) and `llm-wiki-builder` keeps `llm-wiki/` as the long-term Markdown knowledge layer.
 
 - Requires Python 3.10+; the PyPI package is currently `graphifyy`, while the CLI remains `graphify`.
-- The installer registers Graphify for the selected AI agent: Claude Code, Codex, or Gemini.
+- The installer registers Graphify for the selected AI agent: Claude Code, Codex, Gemini, or OpenCode.
 - For Codex, the installer asks before enabling `multi_agent = true` in `~/.codex/config.toml` and backs up the file first.
 - The installer asks before the first graph build because docs, PDFs, images, audio, and video extraction may consume model/API credits.
 - Graphify `--wiki` output is not automatically merged into `llm-wiki/`.
@@ -199,7 +199,7 @@ project/
 
 **Suitable for**: personal knowledge management, technical research, domain learning notes, team knowledge bases — any scenario where you want AI to help you accumulate and organize knowledge over time.
 
-**How it works**: Claude Code, Codex, or Gemini can serve as the AI agent that reads, writes and maintains the wiki; Claude Code is the default priority agent, but not the only supported option. [Obsidian](https://obsidian.md) serves as the visual editor and reader. You chat with the AI to ingest sources, query knowledge, and run health checks — while browsing and navigating the wiki graph in Obsidian.
+**How it works**: Claude Code, Codex, Gemini, or OpenCode can serve as the AI agent that reads, writes and maintains the wiki; Claude Code is the default priority agent, but not the only supported option. [Obsidian](https://obsidian.md) serves as the visual editor and reader. You chat with the AI to ingest sources, query knowledge, and run health checks — while browsing and navigating the wiki graph in Obsidian.
 
 **Three-layer architecture**: project root (source material) → `llm-wiki/` (LLM-maintained pages) → Schema (`AGENTS.md`)
 

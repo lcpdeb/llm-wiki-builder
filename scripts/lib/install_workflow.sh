@@ -1156,6 +1156,7 @@ graphify_platform_for_selected_agent() {
     claude) printf 'claude\n' ;;
     codex) printf 'codex\n' ;;
     gemini) printf 'gemini\n' ;;
+    opencode) printf 'opencode\n' ;;
     *) printf '\n' ;;
   esac
 }
