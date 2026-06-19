@@ -5,7 +5,7 @@ set -euo pipefail
 export LC_MESSAGES=C
 
 VERSION="1.0.1"
-TEMPLATE_REPO="${TEMPLATE_REPO:-eleven-net-cn/llm-wiki-starter}"
+TEMPLATE_REPO="${TEMPLATE_REPO:-lcpdeb/llm-wiki-builder}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || pwd)"
 if [[ -f "$SCRIPT_DIR/install.sh" ]]; then

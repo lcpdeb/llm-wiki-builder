@@ -1,4 +1,4 @@
-﻿<!-- llm-wiki-builder:start -->
+<!-- llm-wiki-builder:start -->
 ## LLM Wiki 工作区
 
 本项目使用 `llm-wiki/` 作为内嵌 LLM Wiki。当前项目根目录就是源材料；不要要求用户把代码或文档复制到 `raw/`。

@@ -4,7 +4,7 @@
 # Author: eleven-net-cn
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/eleven-net-cn/llm-wiki-starter/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash
 #   bash install.sh [OPTIONS]
 #
 # Modes:
@@ -19,7 +19,7 @@ set -euo pipefail
 export LC_MESSAGES=C
 
 VERSION="1.0.1"
-TEMPLATE_REPO="eleven-net-cn/llm-wiki-starter"
+TEMPLATE_REPO="${TEMPLATE_REPO:-lcpdeb/llm-wiki-builder}"
 TEMPLATE_REPO_URL="https://github.com/$TEMPLATE_REPO"
 
 # ─── State ────────────────────────────────────────────────────────────────────
@@ -2310,7 +2310,7 @@ usage() {
 llm-wiki-builder — Create an LLM Wiki knowledge base in one command
 
 Usage:
-  curl -fsSL https://raw.githubusercontent.com/eleven-net-cn/llm-wiki-starter/main/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash
   bash install.sh [OPTIONS]
   bash install.sh --only-tools [OPTIONS]
   bash install.sh --only-obsidian [--dir <project>] [OPTIONS]

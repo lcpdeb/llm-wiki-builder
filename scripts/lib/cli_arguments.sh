@@ -42,7 +42,7 @@ usage() {
 llm-wiki-builder - Create an LLM Wiki knowledge base in one command
 
 Usage:
-  curl -fsSL https://raw.githubusercontent.com/eleven-net-cn/llm-wiki-starter/main/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/lcpdeb/llm-wiki-builder/main/install.sh | bash
   bash install.sh [OPTIONS]
   bash install.sh --only-tools [OPTIONS]
   bash install.sh --only-obsidian [--dir <project>] [OPTIONS]
