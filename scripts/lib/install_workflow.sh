@@ -1949,11 +1949,13 @@ _locate_plugin_manifest() {
   return 1
 }
 
-# Reads plugin entries. Args: group = "core" | "ux". Echoes one "repo|id" per line.
+# Reads plugin entries. Args: manifest_path, group = "core" | "ux".
+# Echoes one "repo|id" per line. Caller must resolve manifest path first
+# so that fail() in this function (or jq/python errors) terminate the main shell
+# rather than being swallowed by a process-substitution subshell.
 read_plugin_manifest() {
-  local group="$1"
-  local manifest
-  manifest="$(_locate_plugin_manifest)" || fail "plugin-manifest.json not found — expected at llm-wiki-builder/assets/"
+  local manifest="$1"
+  local group="$2"
 
   if command -v jq &>/dev/null; then
     jq -r --arg g "$group" '.[$g][] | "\(.repo)|\(.id)"' "$manifest"
@@ -2004,17 +2006,22 @@ install_obsidian_plugins() {
 
   # Plugin lists: read from shared manifest at llm-wiki-builder/assets/plugin-manifest.json
   # (single source of truth shared with the llm-wiki-builder Skill).
+  # Resolve manifest path in the main shell so a missing manifest aborts the
+  # installer immediately instead of being swallowed by the `< <(...)` subshell below.
+  local manifest_path
+  manifest_path="$(_locate_plugin_manifest)" || fail "plugin-manifest.json not found — expected at llm-wiki-builder/assets/"
+
   local core_plugins=()
   while IFS= read -r line; do
     line="${line%$'\r'}"
     [[ -n "$line" ]] && core_plugins+=("$line")
-  done < <(read_plugin_manifest core)
+  done < <(read_plugin_manifest "$manifest_path" core)
 
   local ux_plugins=()
   while IFS= read -r line; do
     line="${line%$'\r'}"
     [[ -n "$line" ]] && ux_plugins+=("$line")
-  done < <(read_plugin_manifest ux)
+  done < <(read_plugin_manifest "$manifest_path" ux)
 
   if [[ ${#core_plugins[@]} -eq 0 || ${#ux_plugins[@]} -eq 0 ]]; then
     fail "Plugin manifest empty or unreadable at llm-wiki-builder/assets/plugin-manifest.json"

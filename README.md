@@ -193,6 +193,8 @@ project/
 
 > **Tip**: The project root is the source layer. The agent writes only to `llm-wiki/` unless you explicitly ask it to modify project files.
 
+> **Open Obsidian on the project root**, not on `llm-wiki/`. Plugins, hotkeys and `app.json` are stored in `<project>/.obsidian/`, so opening `llm-wiki/` as a vault will show none of the configured plugins.
+
 ## What is LLM Wiki?
 
 [LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) is a knowledge management pattern proposed by Andrej Karpathy: instead of traditional RAG that retrieves from scratch every query, the LLM **incrementally builds and maintains a persistent wiki** — cross-references are established automatically, contradictions are flagged, and synthesis is continuously updated. Each new source makes the wiki richer.

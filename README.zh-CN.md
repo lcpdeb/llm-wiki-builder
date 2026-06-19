@@ -193,6 +193,8 @@ project/
 
 > **提示**：项目根目录就是源材料层。除非你明确要求，Agent 只把分析结果写入 `llm-wiki/`。
 
+> **用 Obsidian 打开项目根目录**，不要打开 `llm-wiki/` 子目录。插件、快捷键和 `app.json` 都写在 `<项目>/.obsidian/`，把 `llm-wiki/` 当 vault 打开会看不到任何已配置的插件。
+
 ## 什么是 LLM Wiki？
 
 [LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) 是 Andrej Karpathy 提出的知识管理模式：不同于传统 RAG 每次查询从零检索，LLM **增量式地构建和维护一个持久化的 wiki** —— 交叉引用自动建立，矛盾被标记，综合分析持续更新。每次添加新资料都会让 wiki 更丰富。

@@ -4,8 +4,14 @@
 merge_json() {
   local target_file="$1" template_file="$2"
   if command -v jq &>/dev/null; then
-    jq -s '.[0] * .[1]' "$target_file" "$template_file" > "${target_file}.merged" 2>/dev/null
-    mv "${target_file}.merged" "$target_file"
+    local jq_rc=0
+    jq -s '.[0] * .[1]' "$target_file" "$template_file" > "${target_file}.merged" 2>/dev/null || jq_rc=$?
+    if [[ $jq_rc -eq 0 && -s "${target_file}.merged" ]]; then
+      mv "${target_file}.merged" "$target_file"
+    else
+      rm -f "${target_file}.merged"
+      warn "jq merge failed (exit=$jq_rc) for $(basename "$target_file") - keeping original config"
+    fi
     return 0
   fi
 
